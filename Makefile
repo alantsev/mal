@@ -70,7 +70,7 @@ DOCKERIZE =
 # Settings
 #
 
-IMPLS = ada awk bash c d clojure coffee cpp crystal cs erlang elisp \
+IMPLS = art ada awk bash c d clojure coffee cpp crystal cs erlang elisp \
 	elixir es6 factor forth fsharp go groovy guile haskell haxe \
 	io java julia js kotlin lua make mal ocaml matlab miniMAL \
 	nim objc objpascal perl php ps python r racket rpython ruby \
@@ -138,6 +138,7 @@ STEP_TEST_FILES = $(strip $(wildcard \
 		      $(1)/tests/$($(s)).mal tests/$($(s)).mal)))
 
 # Map of step (e.g. "step8") to executable file for that step
+art_STEP_TO_PROG =     art/$($(1))
 ada_STEP_TO_PROG =     ada/$($(1))
 awk_STEP_TO_PROG =     awk/$($(1)).awk
 bash_STEP_TO_PROG =    bash/$($(1)).sh
@@ -201,6 +202,7 @@ export FACTOR_ROOTS := .
 #   $(1): step (e.g. "stepA")
 #   $(2): program for step (e.g. result of *_STEP_TO_PROG
 #   $(3): program arguments
+art_RUNSTEP =     ../$(2) $(3)
 ada_RUNSTEP =     ../$(2) $(3)
 awk_RUNSTEP =     awk -O -f ../$(2) $(3)
 bash_RUNSTEP =    bash ../$(2) $(3)
