@@ -1,5 +1,10 @@
+#include <cstdio>
+#include <readline/readline.h>
+#include <readline/history.h>
+
 #include <iostream>
 #include <string>
+
 
 static const char* PROMPT = "user> ";
 
@@ -7,13 +12,30 @@ static const char* PROMPT = "user> ";
 class repl_exception{};
 
 //
-std::string readline()
+std::string 
+readline()
 {
-    std::string line;
-    if (!getline(std::cin, line))
-        throw repl_exception();
-    return line;
+    std::string retVal;
+    {
+        char * line = readline(PROMPT);
+        if (!line)
+            throw repl_exception();
+
+        if (*line) 
+            add_history(line);
+
+        retVal = line;
+        free(line);
+    }
+    return retVal;
+}
+
+void
+printline(std::string&& line)
+{
+    std::cout << line << std::endl;
 };
+
 
 //
 std::string
@@ -24,50 +46,40 @@ READ()
 
 //
 std::string
-EVAL(const std::string& input)
+EVAL(std::string&& input)
 {
-    return input;
+    return std::move(input);
 }
 
 //
-std::string
-PRINT(const std::string& input)
+void
+PRINT(std::string&& input)
 {
-    return input;
+    printline(std::move(input));
 }
 
 //
-std::string
+void
 rep()
 {
     auto&& line = READ();
-    auto&& ast = EVAL(line);
-    auto&& output = PRINT(ast);
-    return output;
-}
-
-//
-void repl()
-{
-    try
-    {
-        for (;;)
-        {
-            std::cout << PROMPT;
-            auto&& output = rep();
-            std::cout << output << std::endl;
-        }
-    }
-    catch (const repl_exception&)
-    {
-    }
-    std::cout << std::endl;
+    auto&& ast = EVAL(std::move(line));
+    PRINT(std::move(ast));
 }
 
 //
 int
 main(int, char**)
 {
-    repl();
-    return 0;
+    try
+    {
+        for (;;)
+        {
+            rep();
+        }
+    }
+    catch (const repl_exception&)
+    {
+    }
+    std::cout << std::endl;
 }

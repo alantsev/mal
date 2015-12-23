@@ -5,9 +5,7 @@
 
 #include "ast.h"
 
-
 static const char* PROMPT = "user> ";
-
 
 //
 class repl_exception{};
