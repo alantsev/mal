@@ -5,11 +5,9 @@
 #include <iostream>
 #include <string>
 
+#include "MAL.h"
 
 static const char* PROMPT = "user> ";
-
-//
-class repl_exception{};
 
 //
 std::string 

@@ -1,19 +1,18 @@
 #pragma once
 
 #include <string>
-#include <sstream>
 #include <vector>
 
-#include <regex>
+#include <assert.h>
 
 ///////////////////////////////
 class ast_node
 {
 public:
-    ast_node() {}
-    virtual ~ast_node() {}
+    ast_node () {}
+    virtual ~ast_node () {}
 
-    virtual std::string to_string() const = 0;
+    virtual std::string to_string () const = 0;
 };
 
 ///////////////////////////////
@@ -22,134 +21,105 @@ class ast_node_atom : public ast_node
 };
 
 ///////////////////////////////
+class ast_node_list : public ast_node
+{
+public:
+
+    std::string to_string () const override
+    {
+        std::string retVal = "(";
+        for (size_t i = 0, e = m_children.size (); i < e; ++i)
+        {
+            auto &&p = m_children [i];
+            if (i != 0)
+                retVal += " ";
+            retVal += p->to_string ();
+        }
+        retVal += ")";
+
+        return retVal;
+    }
+
+    std::unique_ptr<ast_node> clear_and_grab_first_child () 
+    {
+        assert (size () > 0);
+        std::unique_ptr<ast_node> retVal = std::move (m_children [0]);
+        m_children.clear ();
+        return std::move (retVal);
+    }
+
+    size_t size () const
+    {
+        return m_children.size ();
+    }
+
+    void add_children (std::unique_ptr<ast_node> child)
+    {
+        m_children.push_back (std::move (child));
+    }
+
+
+private:
+    std::vector<std::unique_ptr<ast_node> > m_children;
+};
+
+///////////////////////////////
 class ast_atom_symbol : public ast_node_atom
 {
 public:
-    ast_atom_symbol(const std::string& a_symbol)
-    : symbol(a_symbol)
+    ast_atom_symbol (std::string a_symbol)
+        : m_symbol (std::move (a_symbol))
     {}
 
-    std::string to_string() const override
+    std::string to_string () const override
     {
-        std::ostringstream stringStream;
-        stringStream << symbol;
-        return stringStream.str();
+        // FIXME
+        return m_symbol;
     }
 
 private:
-    std::string symbol;
+    std::string m_symbol;
 };
 
 ///////////////////////////////
 class ast_atom_int : public ast_node_atom
 {
 public:
-    ast_atom_int(int a_value)
-    : value(a_value)
+    ast_atom_int (int a_value)
+        : m_value (a_value)
     {}
 
-    std::string to_string() const override
+    std::string to_string () const override
     {
-        std::ostringstream stringStream;
-        stringStream << value;
-        return stringStream.str();
+        // FIXME
+        return std::to_string (m_value);
     }
 
 private:
-    int value;
+    int m_value;
 };
 
 ///////////////////////////////
-class ast_node_list : public ast_node
+struct ast
 {
-public:
-
-    void add_node(std::unique_ptr<ast_node> node)
-    {
-        nodes.push_back(std::move(node));
-    }
-
-    std::string to_string() const override
-    {
-        std::ostringstream stringStream;
-        stringStream << "(";
-        bool addSpace = false;
-        for (auto&& n : nodes)
-        {
-            if (addSpace)
-            {
-                stringStream << " ";
-            }
-            else
-            {
-                addSpace = true;
-            }
-            stringStream << n->to_string();
-        }
-        stringStream << ")";
-        return stringStream.str();
-    }
-
-private:
-    std::vector<std::unique_ptr<ast_node> > nodes;
+    std::unique_ptr<ast_node> m_root;
 };
 
 ///////////////////////////////
-class ast_node_vector : public ast_node
+class ast_builder
 {
 public:
+    ast_builder ();
 
-    void add_node(std::unique_ptr<ast_node> node)
-    {
-        nodes.push_back(std::move(node));
-    }
+    ast_builder& open_list ();
+    ast_builder& close_list ();
 
-    std::string to_string() const override
-    {
-        std::ostringstream stringStream;
-        stringStream << "[";
-        bool addSpace = false;
-        for (auto&& n : nodes)
-        {
-            if (addSpace)
-            {
-                stringStream << " ";
-            }
-            else
-            {
-                addSpace = true;
-            }
-            stringStream << n->to_string();
-        }
-        stringStream << "]";
-        return stringStream.str();
-    }
+    ast_builder& add_symbol (std::string);
+    ast_builder& add_int (int);
+
+    ast build();
 
 private:
-    std::vector<std::unique_ptr<ast_node> > nodes;
-};
-
-
-///////////////////////////////
-class ast
-{
-public:
-    //
-    static std::unique_ptr<ast> parse(const std::string& a_line)
-    {
-        return std::unique_ptr<ast>(new ast(a_line));
-    }
-
-    std::string to_string() const
-    {
-        return root->to_string();
-    }
-
-private:
-    //
-    ast(const std::string& a_line);
-    
-    
-    //
-    std::unique_ptr<ast_node> root;
+    std::unique_ptr<ast_node_list> m_meta_root;
+    std::vector<ast_node_list*> m_current_stack;
 };

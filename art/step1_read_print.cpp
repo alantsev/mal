@@ -1,82 +1,88 @@
+#include <cstdio>
+#include <readline/readline.h>
+#include <readline/history.h>
+
 #include <iostream>
 #include <string>
-#include <sstream>
-#include <vector>
 
-#include "ast.h"
+#include "MAL.h"
 
 static const char* PROMPT = "user> ";
 
-//
-class repl_exception{};
-
-//
-std::string
-readline()
+///////////////////////////////
+std::string 
+readline ()
 {
-    std::string line;
-    if (!getline(std::cin, line))
-        throw repl_exception();
-    return line;
-};
+    std::string retVal;
+    {
+        char * line = readline(PROMPT);
+        if (!line)
+            throw repl_exception();
 
+        if (*line) 
+            add_history(line);
+
+        retVal = line;
+        free(line);
+    }
+    return retVal;
+}
+
+///////////////////////////////
 void
-printline(const std::string& line)
+printline (std::string &&line)
 {
     std::cout << line << std::endl;
 };
 
-//
-std::unique_ptr<ast>
-READ()
+///////////////////////////////
+ast
+READ ()
 {
-    auto&& line = readline();
-    return ast::parse(line);
+    return read_str ( readline ());
 }
 
-//
-std::unique_ptr<ast>
-EVAL(std::unique_ptr<ast> ast)
+///////////////////////////////
+ast
+EVAL (ast &&a_ast)
 {
-    return std::move(ast);
+    return std::move(a_ast);
 }
 
-//
+///////////////////////////////
 void
-PRINT(const ast* ast)
+PRINT (ast&& a_ast)
 {
-    printline(ast->to_string());
+    printline (pr_str (std::move (a_ast)));
 }
 
-//
+///////////////////////////////
 void
-rep()
+rep ()
 {
-    auto&& ast = EVAL(READ());
-    PRINT(ast.get());
+    PRINT (EVAL ( READ()));
 }
 
-//
-void repl()
+///////////////////////////////
+int
+main(int, char**)
 {
     try
     {
         for (;;)
         {
-            std::cout << PROMPT;
-            rep();
+            try
+            {
+                rep();
+            }
+            catch (const parse_error &)
+            {
+                printline ("parsing error!");
+            }
         }
     }
     catch (const repl_exception&)
     {
     }
     std::cout << std::endl;
-}
-
-//
-int
-main(int, char**)
-{
-    repl();
-    return 0;
 }
