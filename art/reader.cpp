@@ -18,15 +18,15 @@ read_str (std::string line)
     if (from + 1 < to)
     {
       char *end;
-      int valInt = std::strtol(token.data () + from, &end, 10);
+      int valInt = std::strtol(line.data () + from, &end, 10);
 
-      if (end == token.data () + to)
+      if (end == line.data () + to)
       {
         builder.add_int (valInt);
       }
       else
       {
-        builder.add_symbol (line.substr (from, to - from));
+        builder.add_symbol (line.substr (from, to - from - 1));
       }
     }
   };
@@ -34,31 +34,25 @@ read_str (std::string line)
   for (auto ch : line)
   {
     ++current_position;
-    bool isDelim = false;
     if (ch == '(')
     {
-      isDelim = true;
+      fnProcessToken (last_delim_position, current_position);
       last_delim_position = current_position;
       builder.open_list ();
     }
     else if (ch == ')')
     {
-      isDelim = true;
+      fnProcessToken (last_delim_position, current_position);
       last_delim_position = current_position;
       builder.close_list ();
     }
     else if (std::isspace (ch))
     {
-      isDelim = true;
-    }
-
-    if (isDelim)
-    {
       fnProcessToken (last_delim_position, current_position);
       last_delim_position = current_position;
     }
   }
-  fnProcessToken (last_delim_position, current_position);
+  fnProcessToken (last_delim_position, current_position + 1);
 
   return builder.build ();
 
