@@ -46,7 +46,7 @@ read_str (std::string line)
       last_delim_position = current_position;
       builder.close_list ();
     }
-    else if (std::isspace (ch))
+    else if (std::isspace (ch) || ch == ',')
     {
       fnProcessToken (last_delim_position, current_position);
       last_delim_position = current_position;
