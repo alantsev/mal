@@ -1,5 +1,8 @@
 #pragma once
 
+#include "pointer.h"
+#include "arena.h"
+
 #include <string>
 #include <vector>
 
@@ -9,8 +12,7 @@
 class ast_node
 {
 public:
-    ast_node () {}
-    virtual ~ast_node () {}
+    virtual ~ast_node () = default;
 
     virtual std::string to_string () const = 0;
 };
@@ -21,61 +23,12 @@ class ast_node_atom : public ast_node
 };
 
 ///////////////////////////////
-class ast_node_list : public ast_node
-{
-public:
-
-    std::string to_string () const override
-    {
-        std::string retVal = "(";
-        for (size_t i = 0, e = m_children.size (); i < e; ++i)
-        {
-            auto &&p = m_children [i];
-            if (i != 0)
-                retVal += " ";
-            retVal += p->to_string ();
-        }
-        retVal += ")";
-
-        return retVal;
-    }
-
-    std::unique_ptr<ast_node> clear_and_grab_first_child () 
-    {
-        assert (size () > 0);
-        std::unique_ptr<ast_node> retVal = std::move (m_children [0]);
-        m_children.clear ();
-        return std::move (retVal);
-    }
-
-    size_t size () const
-    {
-        return m_children.size ();
-    }
-
-    void add_children (std::unique_ptr<ast_node> child)
-    {
-        m_children.push_back (std::move (child));
-    }
-
-
-private:
-    std::vector<std::unique_ptr<ast_node> > m_children;
-};
-
-///////////////////////////////
 class ast_atom_symbol : public ast_node_atom
 {
 public:
-    ast_atom_symbol (std::string a_symbol)
-        : m_symbol (std::move (a_symbol))
-    {}
+    ast_atom_symbol (std::string a_symbol);
 
-    std::string to_string () const override
-    {
-        // FIXME
-        return m_symbol;
-    }
+    std::string to_string () const override;
 
 private:
     std::string m_symbol;
@@ -85,18 +38,26 @@ private:
 class ast_atom_int : public ast_node_atom
 {
 public:
-    ast_atom_int (int a_value)
-        : m_value (a_value)
-    {}
+    ast_atom_int (int a_value);
 
-    std::string to_string () const override
-    {
-        // FIXME
-        return std::to_string (m_value);
-    }
+    std::string to_string () const override;
 
 private:
     int m_value;
+};
+
+///////////////////////////////
+class ast_node_list : public ast_node
+{
+public:
+    std::string to_string () const override;
+
+    std::unique_ptr<ast_node> clear_and_grab_first_child ();
+    size_t size () const;
+    void add_children (std::unique_ptr<ast_node> child);
+
+private:
+    std::vector<std::unique_ptr<ast_node> > m_children;
 };
 
 ///////////////////////////////

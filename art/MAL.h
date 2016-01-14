@@ -1,5 +1,4 @@
-#ifndef _MAL_H_
-#define _MAL_H_
+#pragma once
 
 #include "ast.h"
 #include <assert.h>
@@ -14,5 +13,3 @@ class parse_error
 
 ast read_str (std::string line);
 std::string pr_str (ast a_ast);
-
-#endif
