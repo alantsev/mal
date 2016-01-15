@@ -21,11 +21,11 @@ ast_node_list::to_string () const // override
 }
 
 ///////////////////////////////
-std::unique_ptr<ast_node> 
+ast_node::ptr
 ast_node_list::clear_and_grab_first_child () 
 {
     assert (size () > 0);
-    std::unique_ptr<ast_node> retVal = std::move (m_children [0]);
+    ast_node::ptr retVal = std::move (m_children [0]);
     m_children.clear ();
     return std::move (retVal);
 }
@@ -39,7 +39,7 @@ ast_node_list::size () const
 
 ///////////////////////////////
 void 
-ast_node_list::add_children (std::unique_ptr<ast_node> child)
+ast_node_list::add_child (ast_node::ptr child)
 {
     m_children.push_back (std::move (child));
 }
@@ -89,7 +89,7 @@ ast_builder::open_list ()
     std::unique_ptr<ast_node_list> child { new ast_node_list {} };
     ast_node_list* child_ref = child.get ();
 
-    m_current_stack.back ()->add_children (std::move (child));
+    m_current_stack.back ()->add_child (std::move (child));
     m_current_stack.push_back (child_ref);
     return *this;
 }
@@ -110,7 +110,7 @@ ast_builder&
 ast_builder::add_symbol (std::string value)
 {
     std::unique_ptr<ast_atom_symbol> child { new ast_atom_symbol {std::move (value)} };
-    m_current_stack.back ()->add_children (std::move (child));
+    m_current_stack.back ()->add_child (std::move (child));
     return *this;
 }
 
@@ -119,7 +119,7 @@ ast_builder&
 ast_builder::add_int (int value)
 {
     std::unique_ptr<ast_atom_int> child { new ast_atom_int { value } };
-    m_current_stack.back ()->add_children (std::move (child));
+    m_current_stack.back ()->add_child (std::move (child));
     return *this;
 }
 
