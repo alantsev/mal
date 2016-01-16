@@ -45,33 +45,48 @@ ast_node_list::add_child (ast_node::ptr child)
 }
 
 ///////////////////////////////
-/// ast_atom_symbol class
+/// ast_node_atom_symbol class
 ///////////////////////////////
-ast_atom_symbol::ast_atom_symbol (std::string a_symbol)
+ast_node_atom_symbol::ast_node_atom_symbol (std::string a_symbol)
     : m_symbol (std::move (a_symbol))
 {}
 
 ///////////////////////////////
 std::string
-ast_atom_symbol::to_string () const // override
+ast_node_atom_symbol::to_string () const // override
 {
     // FIXME
     return m_symbol;
 }
 
 ///////////////////////////////
-/// ast_builder class
+/// ast_node_atom_int class
 ///////////////////////////////
-ast_atom_int::ast_atom_int (int a_value)
+ast_node_atom_int::ast_node_atom_int (int a_value)
     : m_value (a_value)
 {}
 
 ///////////////////////////////
 std::string
-ast_atom_int::to_string () const // override
+ast_node_atom_int::to_string () const // override
 {
     // FIXME
     return std::to_string (m_value);
+}
+
+///////////////////////////////
+/// ast_node_callable_builtin class
+///////////////////////////////
+ast_node_callable_builtin::ast_node_callable_builtin (std::string signature, ast_node_callable_builtin::builtin_fn fn)
+    : m_signature (std::move (signature))
+    , m_fn (fn)
+{}
+
+///////////////////////////////
+ast_node::ptr 
+ast_node_callable_builtin::call (const ast_node_callable::arguments& args) const
+{
+    return m_fn (args);
 }
 
 ///////////////////////////////
@@ -100,7 +115,7 @@ ast_builder::close_list ()
 {
     m_current_stack.pop_back ();
     if (m_current_stack.size () == 0) 
-        throw parse_error {};
+        raise<mal_exception_parse_error> ();
 
     return *this;
 }
@@ -109,7 +124,7 @@ ast_builder::close_list ()
 ast_builder& 
 ast_builder::add_symbol (std::string value)
 {
-    std::unique_ptr<ast_atom_symbol> child { new ast_atom_symbol {std::move (value)} };
+    std::unique_ptr<ast_node_atom_symbol> child { new ast_node_atom_symbol {std::move (value)} };
     m_current_stack.back ()->add_child (std::move (child));
     return *this;
 }
@@ -118,7 +133,7 @@ ast_builder::add_symbol (std::string value)
 ast_builder& 
 ast_builder::add_int (int value)
 {
-    std::unique_ptr<ast_atom_int> child { new ast_atom_int { value } };
+    std::unique_ptr<ast_node_atom_int> child { new ast_node_atom_int { value } };
     m_current_stack.back ()->add_child (std::move (child));
     return *this;
 }
@@ -128,11 +143,11 @@ ast
 ast_builder::build()
 {
     if (m_current_stack.size () != 1) 
-        throw parse_error {};
+        raise<mal_exception_parse_error> ();
 
     const size_t level0_count = m_current_stack.back()->size (); 
     if (level0_count > 1) 
-        throw parse_error {};
+        raise<mal_exception_parse_error> ();
 
     if (level0_count == 0)
         return ast {};

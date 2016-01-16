@@ -2,6 +2,7 @@
 
 #include "pointer.h"
 #include "arena.h"
+#include "exceptions.h"
 
 #include <string>
 #include <vector>
@@ -21,6 +22,17 @@ enum class node_type_enum
 };
 
 ///////////////////////////////
+class ast_node;
+
+class ast_node_atom_symbol;
+class ast_node_atom_int;
+
+class ast_node_list;
+
+class ast_node_callable;
+class ast_node_callable_builtin;
+
+///////////////////////////////
 class ast_node
 {
 public:
@@ -31,11 +43,29 @@ public:
     virtual std::string to_string () const = 0;
     virtual node_type_enum type () const = 0;
 
-    // FIXME
-    // as<int> () -> ???
+    //
+    template <typename T>
+    const T* as () const
+    {
+        assert (type () == T::GET_TYPE ());
+        return static_cast<const T*> (this);
+    }
 
-    // FIXME - addme ?
-    // virtual ptr clone () const = 0;
+    template <typename T, typename TException>
+    const T* as_or_throw () const
+    {
+        if (type () != T::GET_TYPE ())
+            raise<TException> ();
+        return static_cast<const T*> (this);
+    }
+
+    template <typename T, typename TException>
+    const T* as_or_zero () const
+    {
+        if (type () != T::GET_TYPE ())
+            return nullptr;
+        return static_cast<const T*> (this);
+    }
 
 private:
     ast_node (const ast_node&) = delete;
@@ -51,6 +81,11 @@ public:
     {
         return NODE_TYPE;
     }
+
+    static constexpr node_type_enum GET_TYPE ()
+    {
+        return NODE_TYPE;
+    }
 };
 
 ///////////////////////////////
@@ -59,10 +94,10 @@ class ast_node_atom : public ast_node_base<NODE_TYPE>
 {};
 
 ///////////////////////////////
-class ast_atom_symbol : public ast_node_atom <node_type_enum::SYMBOL>
+class ast_node_atom_symbol : public ast_node_atom <node_type_enum::SYMBOL>
 {
 public:
-    ast_atom_symbol (std::string a_symbol);
+    ast_node_atom_symbol (std::string a_symbol);
 
     std::string to_string () const override;
 
@@ -71,12 +106,16 @@ private:
 };
 
 ///////////////////////////////
-class ast_atom_int : public ast_node_atom <node_type_enum::INT>
+class ast_node_atom_int : public ast_node_atom <node_type_enum::INT>
 {
 public:
-    ast_atom_int (int a_value);
+    ast_node_atom_int (int a_value);
 
     std::string to_string () const override;
+    int value () const
+    {
+        return m_value;
+    }
 
 private:
     int m_value;
@@ -113,9 +152,24 @@ public:
 };
 
 ///////////////////////////////
-// FIXME - implement me!
-//template <>
-//class ast_node_callable_builtin :
+class ast_node_callable_builtin : public ast_node_callable
+{
+public:
+    using builtin_fn = ast_node::ptr (*) (const ast_node_callable::arguments&);
+    ast_node_callable_builtin (std::string signature, builtin_fn fn);
+
+    std::string to_string () const override
+    {
+        return m_signature;
+    }
+
+
+    ast_node::ptr call (const arguments& args) const override;
+
+private:
+    std::string m_signature;
+    builtin_fn m_fn;
+};
 
 ///////////////////////////////
 struct ast

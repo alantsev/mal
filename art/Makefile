@@ -8,7 +8,7 @@ READLINE=/opt/local
 INCPATHS=-I$(READLINE)/include
 LIBPATHS=-L$(READLINE)/lib
 
-CXXFLAGS=-O2 $(INCPATHS) -Wall -std=c++11
+CXXFLAGS=-O2 $(INCPATHS) -Wall -std=c++14
 LDFLAGS=-O2 $(LIBPATHS) -L. -lreadline -lhistory
 
 LIBSOURCES=ast.cpp reader.cpp environment.cpp arena.cpp

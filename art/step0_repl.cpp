@@ -17,7 +17,7 @@ readline()
     {
         char * line = readline(PROMPT);
         if (!line)
-            throw repl_exception();
+            raise<mal_exception_parse_error> ();
 
         if (*line) 
             add_history(line);
@@ -76,7 +76,7 @@ main(int, char**)
             rep();
         }
     }
-    catch (const repl_exception&)
+    catch (const mal_exception&)
     {
     }
     std::cout << std::endl;
