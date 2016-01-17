@@ -94,6 +94,14 @@ eval_ast (ast_node::ptr node, const environment& a_env)
             node_list->map ([&a_env] (ast_node::ptr v) { return std::move (eval_impl (std::move (v), a_env));});
             break;
         }
+    case node_type_enum::VECTOR:
+        {
+            // as_or_throw ?
+            auto&& node_vector = node->as<ast_node_vector> ();
+            node_vector->map ([&a_env] (ast_node::ptr v) { return std::move (eval_impl (std::move (v), a_env));});
+            break;
+        }
+
     default:
         break;
     }

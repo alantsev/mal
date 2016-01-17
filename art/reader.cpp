@@ -33,23 +33,46 @@ read_str (std::string line)
   for (auto ch : line)
   {
     ++current_position;
-    if (ch == '(')
+    switch (ch)
     {
-      fnProcessToken (last_delim_position, current_position);
-      last_delim_position = current_position;
-      builder.open_list ();
-    }
-    else if (ch == ')')
-    {
-      fnProcessToken (last_delim_position, current_position);
-      last_delim_position = current_position;
-      builder.close_list ();
-    }
-    else if (std::isspace (ch) || ch == ',')
-    {
-      fnProcessToken (last_delim_position, current_position);
-      last_delim_position = current_position;
-    }
+      case '(':
+      {
+        fnProcessToken (last_delim_position, current_position);
+        last_delim_position = current_position;
+        builder.open_list ();
+        break;
+      }
+      case ')':
+      {
+        fnProcessToken (last_delim_position, current_position);
+        last_delim_position = current_position;
+        builder.close_list ();
+        break;
+      }
+      case '[':
+      {
+        fnProcessToken (last_delim_position, current_position);
+        last_delim_position = current_position;
+        builder.open_vector ();
+        break;
+      }
+      case ']':
+      {
+        fnProcessToken (last_delim_position, current_position);
+        last_delim_position = current_position;
+        builder.close_vector ();
+        break;
+      }
+      default:
+      {
+        if (std::isspace (ch) || ch == ',')
+        {
+          fnProcessToken (last_delim_position, current_position);
+          last_delim_position = current_position;
+        }
+        break;
+      }
+    };
   }
   fnProcessToken (last_delim_position, current_position + 1);
 

@@ -31,17 +31,22 @@ ast_node_list::clear_and_grab_first_child ()
 }
 
 ///////////////////////////////
-size_t 
-ast_node_list::size () const
-{
-    return m_children.size ();
-}
-
+/// ast_node_vector class
 ///////////////////////////////
-void 
-ast_node_list::add_child (ast_node::ptr child)
+std::string 
+ast_node_vector::to_string () const // override
 {
-    m_children.push_back (std::move (child));
+    std::string retVal = "[";
+    for (size_t i = 0, e = m_children.size (); i < e; ++i)
+    {
+        auto &&p = m_children [i];
+        if (i != 0)
+            retVal += " ";
+        retVal += p->to_string ();
+    }
+    retVal += "]";
+
+    return retVal;
 }
 
 ///////////////////////////////
@@ -113,6 +118,31 @@ ast_builder::open_list ()
 ast_builder& 
 ast_builder::close_list ()
 {
+    m_current_stack.back ()->as_or_throw<ast_node_list, mal_exception_parse_error> ();
+    m_current_stack.pop_back ();
+    if (m_current_stack.size () == 0) 
+        raise<mal_exception_parse_error> ();
+
+    return *this;
+}
+
+///////////////////////////////
+ast_builder&
+ast_builder::open_vector ()
+{
+    std::unique_ptr<ast_node_vector> child { new ast_node_vector {} };
+    ast_node_vector* child_ref = child.get ();
+
+    m_current_stack.back ()->add_child (std::move (child));
+    m_current_stack.push_back (child_ref);
+    return *this;
+}
+
+///////////////////////////////
+ast_builder& 
+ast_builder::close_vector ()
+{
+    m_current_stack.back ()->as_or_throw<ast_node_vector, mal_exception_parse_error> ();
     m_current_stack.pop_back ();
     if (m_current_stack.size () == 0) 
         raise<mal_exception_parse_error> ();
@@ -152,7 +182,7 @@ ast_builder::build()
     if (level0_count == 0)
         return ast {};
 
-    ast retVal {std::move (m_current_stack.back()->clear_and_grab_first_child ())};
+    ast retVal {std::move (m_current_stack.back()->as_or_throw<ast_node_list, mal_exception_parse_error> ()->clear_and_grab_first_child ())};
     m_current_stack.clear ();
     m_meta_root.reset ();
 

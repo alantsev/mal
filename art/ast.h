@@ -17,6 +17,7 @@ enum class node_type_enum
     STRING,
     INT,
     LIST,
+    VECTOR,
     CALLABLE,
     NODE_TYPE_COUNT
 };
@@ -167,24 +168,19 @@ private:
 };
 
 ///////////////////////////////
-class ast_node_list : public ast_node_base <node_type_enum::LIST>
+class ast_node_container_base : public ast_node
 {
 public:
-    std::string to_string () const override;
-    ast_node::ptr clone () const override
+    size_t size () const
     {
-        auto new_list = std::make_unique<ast_node_list> ();
-        for (auto &&v : m_children)
-        {
-            new_list->m_children.push_back (v->clone ());
-        }
-        return ast_node::ptr (new_list.release ());
+        return m_children.size ();
     }
 
-    // FIXME - do we need it?
-    ast_node::ptr clear_and_grab_first_child ();
-    size_t size () const;
-    void add_child (ast_node::ptr child);
+    void add_child (ast_node::ptr child)
+    {
+        m_children.push_back (std::move (child));
+    }
+
     const ast_node* operator [] (size_t index) const
     {
         assert (index < size ());
@@ -200,6 +196,45 @@ public:
             v = std::move (newV);
         }
     }
+
+protected:
+    std::vector<ast_node::ptr> m_children;
+};
+
+///////////////////////////////
+template <node_type_enum NODE_TYPE, typename derived>
+class ast_node_container_crtp : public ast_node_container_base
+{
+public:
+    node_type_enum type () const override
+    {
+        return NODE_TYPE;
+    }
+
+    static constexpr node_type_enum GET_TYPE ()
+    {
+        return NODE_TYPE;
+    }
+
+    ast_node::ptr clone () const override
+    {
+        auto new_list = std::make_unique<derived> ();
+        for (auto &&v : m_children)
+        {
+            new_list->m_children.push_back (v->clone ());
+        }
+        return ast_node::ptr (new_list.release ());
+    }
+};
+
+///////////////////////////////
+class ast_node_list : public ast_node_container_crtp <node_type_enum::LIST, ast_node_list>
+{
+public:
+    std::string to_string () const override;
+
+    // FIXME - do we need it?
+    ast_node::ptr clear_and_grab_first_child ();
 
     ///////////////////////////////
     class list_call_arguments : public call_arguments
@@ -224,11 +259,14 @@ public:
         const ast_node_list* m_owner;
         size_t m_offset;
         size_t m_count;
-
     };
+};
 
-private:
-    std::vector<ast_node::ptr> m_children;
+///////////////////////////////
+class ast_node_vector : public ast_node_container_crtp <node_type_enum::VECTOR, ast_node_vector>
+{
+public:
+    std::string to_string () const override;
 };
 
 ///////////////////////////////
@@ -276,6 +314,9 @@ public:
     ast_builder& open_list ();
     ast_builder& close_list ();
 
+    ast_builder& open_vector ();
+    ast_builder& close_vector ();
+
     ast_builder& add_symbol (std::string);
     ast_builder& add_int (int);
 
@@ -283,5 +324,5 @@ public:
 
 private:
     std::unique_ptr<ast_node_list> m_meta_root;
-    std::vector<ast_node_list*> m_current_stack;
+    std::vector<ast_node_container_base*> m_current_stack;
 };
