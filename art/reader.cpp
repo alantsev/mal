@@ -19,8 +19,7 @@ read_str (std::string line)
     {
       char *end;
       int valInt = std::strtol(line.data () + from, &end, 10);
-
-      if (end == line.data () + to)
+      if (end == line.data () + to - 1)
       {
         builder.add_int (valInt);
       }

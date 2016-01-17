@@ -2,6 +2,8 @@
 
 #include "ast.h"
 #include "exceptions.h"
+#include "environment.h"
+
 #include <assert.h>
 
 ast read_str (std::string line);

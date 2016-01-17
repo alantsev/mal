@@ -84,7 +84,7 @@ ast_node_callable_builtin::ast_node_callable_builtin (std::string signature, ast
 
 ///////////////////////////////
 ast_node::ptr 
-ast_node_callable_builtin::call (const ast_node_callable::arguments& args) const
+ast_node_callable_builtin::call (const call_arguments& args) const
 {
     return m_fn (args);
 }

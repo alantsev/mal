@@ -33,6 +33,17 @@ class ast_node_callable;
 class ast_node_callable_builtin;
 
 ///////////////////////////////
+class call_arguments
+{
+public:
+    virtual ~call_arguments () = default;
+
+    virtual size_t size () const = 0;
+    virtual const ast_node& operator [] (size_t index) const = 0;
+};
+
+
+///////////////////////////////
 class ast_node
 {
 public:
@@ -42,8 +53,15 @@ public:
     virtual ~ast_node () = default;
     virtual std::string to_string () const = 0;
     virtual node_type_enum type () const = 0;
+    virtual ast_node::ptr clone () const = 0;
 
     //
+    template <typename T>
+    T* as ()
+    {
+        assert (type () == T::GET_TYPE ());
+        return static_cast<T*> (this);
+    }
     template <typename T>
     const T* as () const
     {
@@ -52,6 +70,13 @@ public:
     }
 
     template <typename T, typename TException>
+    T* as_or_throw ()
+    {
+        if (type () != T::GET_TYPE ())
+            raise<TException> ();
+        return static_cast<T*> (this);
+    }
+    template <typename T, typename TException>
     const T* as_or_throw () const
     {
         if (type () != T::GET_TYPE ())
@@ -59,6 +84,13 @@ public:
         return static_cast<const T*> (this);
     }
 
+    template <typename T, typename TException>
+    T* as_or_zero ()
+    {
+        if (type () != T::GET_TYPE ())
+            return nullptr;
+        return static_cast<T*> (this);
+    }
     template <typename T, typename TException>
     const T* as_or_zero () const
     {
@@ -98,8 +130,16 @@ class ast_node_atom_symbol : public ast_node_atom <node_type_enum::SYMBOL>
 {
 public:
     ast_node_atom_symbol (std::string a_symbol);
-
     std::string to_string () const override;
+    ast_node::ptr clone () const override
+    {
+        return ast_node::ptr (new ast_node_atom_symbol (m_symbol));
+    }
+
+    const std::string& symbol () const
+    {
+        return m_symbol;
+    }
 
 private:
     std::string m_symbol;
@@ -112,6 +152,11 @@ public:
     ast_node_atom_int (int a_value);
 
     std::string to_string () const override;
+    ast_node::ptr clone () const override
+    {
+        return ast_node::ptr (new ast_node_atom_int (m_value));
+    }
+
     int value () const
     {
         return m_value;
@@ -126,11 +171,62 @@ class ast_node_list : public ast_node_base <node_type_enum::LIST>
 {
 public:
     std::string to_string () const override;
+    ast_node::ptr clone () const override
+    {
+        auto new_list = std::make_unique<ast_node_list> ();
+        for (auto &&v : m_children)
+        {
+            new_list->m_children.push_back (v->clone ());
+        }
+        return ast_node::ptr (new_list.release ());
+    }
 
     // FIXME - do we need it?
     ast_node::ptr clear_and_grab_first_child ();
     size_t size () const;
     void add_child (ast_node::ptr child);
+    const ast_node* operator [] (size_t index) const
+    {
+        assert (index < size ());
+        return m_children[index].get ();
+    }
+
+    template <typename Fn>
+    void map (const Fn& fn)
+    {
+        for (auto && v : m_children)
+        {
+            auto newV = fn (std::move (v));
+            v = std::move (newV);
+        }
+    }
+
+    ///////////////////////////////
+    class list_call_arguments : public call_arguments
+    {
+    public:
+        list_call_arguments (const ast_node_list* owner, size_t offset, size_t count)
+            : m_owner (owner)
+            , m_offset (offset)
+            , m_count (count)
+        {}
+        size_t size () const override
+        {
+            return m_count;
+        }
+
+        const ast_node& operator [] (size_t index) const override
+        {
+            return *(*m_owner) [index + m_offset];
+        }
+
+    private:
+        const ast_node_list* m_owner;
+        size_t m_offset;
+        size_t m_count;
+
+    };
+
 private:
     std::vector<ast_node::ptr> m_children;
 };
@@ -139,32 +235,26 @@ private:
 class ast_node_callable : public ast_node_base  <node_type_enum::CALLABLE>
 {
 public:
-    class arguments
-    {
-    public:
-        virtual ~arguments () = default;
-
-        virtual size_t size () const = 0;
-        virtual const ast_node& operator [] (size_t index) const = 0;
-    };
-
-    virtual ast_node::ptr call (const arguments&) const = 0;
+    virtual ast_node::ptr call (const call_arguments&) const = 0;
 };
 
 ///////////////////////////////
 class ast_node_callable_builtin : public ast_node_callable
 {
 public:
-    using builtin_fn = ast_node::ptr (*) (const ast_node_callable::arguments&);
+    using builtin_fn = ast_node::ptr (*) (const call_arguments&);
     ast_node_callable_builtin (std::string signature, builtin_fn fn);
 
     std::string to_string () const override
     {
         return m_signature;
     }
+    ast_node::ptr clone () const override
+    {
+        return ast_node::ptr (new ast_node_callable_builtin (m_signature, m_fn));
+    }
 
-
-    ast_node::ptr call (const arguments& args) const override;
+    ast_node::ptr call (const call_arguments& args) const override;
 
 private:
     std::string m_signature;
