@@ -2,9 +2,6 @@
 #include "environment.h"
 
 #include <iostream>
-///////////////////////////////
-namespace
-{
 
 ///////////////////////////////
 ast_node::ptr 
@@ -70,39 +67,60 @@ builtin_mul (const call_arguments& args)
     return std::make_unique<ast_node_atom_int> (retVal);
 }
 
-} // end of the anonymous namespace
-
 ///////////////////////////////
 /// environment class
 ///////////////////////////////
-environment::environment ()
+environment::environment (const environment* outer)
+    : m_outer (outer)
+{}
+
+///////////////////////////////
+const environment*
+environment::find (const std::string &symbol) const
 {
-    env_add_builtin ("+", builtin_plus);
-    env_add_builtin ("-", builtin_minus);
-    env_add_builtin ("/", builtin_div);
-    env_add_builtin ("*", builtin_mul);
+    if (m_data.count (symbol) > 0)
+        return this;
+    if (m_outer)
+        return m_outer->find (symbol);
+
+    return nullptr;
 }
 
 ///////////////////////////////
 const ast_node* 
-environment::symbol_lookup (const std::string &symbol) const noexcept
+environment::set (const std::string& symbol, std::unique_ptr<ast_node> val)
 {
-	auto it = m_env.find (symbol);
-	if (it == m_env.end ())
-		return nullptr;
-
-	return it->second.get ();
+    // TODO - return shared ptr here
+    const ast_node* retVal = val.get ();
+    m_data[symbol] = std::move (val);
+    return retVal;
 }
 
 ///////////////////////////////
 const ast_node*
-environment::symbol_lookup_or_throw (const std::string &symbol) const
+environment::get (const std::string& symbol) const
 {
-	auto it = m_env.find (symbol);
-	if (it == m_env.end ())
-		raise<mal_exception_eval_no_symbol> ();
+    auto it = m_data.find (symbol);
+    if (it != m_data.end ())
+        return it->second.get ();
 
-	return it->second.get ();
+    if (m_outer)
+        return m_outer->get (symbol);
+
+    return nullptr;
 }
 
+///////////////////////////////
+const ast_node*
+environment::get_or_throw (const std::string& symbol) const
+{
+    auto it = m_data.find (symbol);
+    if (it != m_data.end ())
+        return it->second.get ();
 
+    if (m_outer)
+        return m_outer->get_or_throw (symbol);
+
+    raise<mal_exception_eval_no_symbol> ();
+    return nullptr;
+}

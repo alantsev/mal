@@ -58,25 +58,89 @@ apply (const ast_node_list* callable_list)
 
 ///////////////////////////////
 ast_node::ptr
-eval_ast (ast_node::ptr node, const environment& a_env); // fwd decl
+eval_ast (ast_node::ptr node, environment& a_env); // fwd decl
 
 ///////////////////////////////
 ast_node::ptr
-eval_impl (ast_node::ptr root, const environment& a_env)
+eval_impl (ast_node::ptr root, environment& a_env)
 {
     if (root->type () != node_type_enum::LIST)
-        return { eval_ast (std::move (root), a_env) };
+        return eval_ast (std::move (root), a_env);
 
+    // as_or_throw
+    auto root_list = root->as<ast_node_list> ();
+
+    // apply special symbols
+    if (root_list->size () > 0)
+    {
+        auto first = (*root_list)[0];
+        if (first->type () == node_type_enum::SYMBOL)
+        {
+            // as_or_throw
+            const auto first_symbol = first->as<ast_node_atom_symbol> ();
+            const auto& symbol = first_symbol->symbol ();
+            if (symbol == "def!")
+            {
+                if (root_list->size () != 3)
+                    raise<mal_exception_eval_invalid_arg> ();
+
+                const auto& key = (*root_list)[1]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
+                // TODO - do we really need clone here???
+                ast_node::ptr value = eval_impl ((*root_list)[2]->clone (), a_env);
+
+                // TODO - get rid of clone here!!!
+                return a_env.set (key, std::move (value))->clone ();
+            }
+            else if (symbol == "let*")
+            {
+                if (root_list->size () != 3)
+                    raise<mal_exception_eval_invalid_arg> ();
+
+                const ast_node_container_base* let_bindings = nullptr;
+                const auto root_list_arg_1 = (*root_list)[1];
+                switch (root_list_arg_1->type ())
+                {
+                case node_type_enum::LIST:
+                    let_bindings = root_list_arg_1->as<ast_node_list> ();
+                    break;
+                case node_type_enum::VECTOR:
+                    let_bindings = root_list_arg_1->as<ast_node_vector> ();
+                    break;
+                default:
+                    raise<mal_exception_eval_invalid_arg> ();
+                };
+
+                //
+                environment let_env (std::addressof (a_env));
+
+                if (let_bindings->size () % 2 != 0)
+                    raise<mal_exception_eval_invalid_arg> ();
+                
+                for (size_t i = 0, e = let_bindings->size(); i < e; i += 2)
+                {
+                    const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
+                    // TODO - do we really need clone here???
+                    ast_node::ptr value = eval_impl ((*let_bindings)[i + 1]->clone (), let_env);
+
+                    let_env.set (key, std::move (value));
+                }
+
+                // TODO - get rid of clone here
+                return eval_impl ((*root_list)[2]->clone (), let_env);
+            }
+        }
+    }
+
+    // default apply
     ast_node::ptr new_node = eval_ast (std::move (root), a_env);
     auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
-
     return apply (new_node_list);
 }
 
 
 ///////////////////////////////
 ast_node::ptr
-eval_ast (ast_node::ptr node, const environment& a_env)
+eval_ast (ast_node::ptr node, environment& a_env)
 {
     switch (node->type ())
     {
@@ -84,7 +148,7 @@ eval_ast (ast_node::ptr node, const environment& a_env)
         {
             // as_or_throw ?
             const auto& node_symbol = node->as<ast_node_atom_symbol> ();
-            return {a_env.get_or_throw (node_symbol->symbol ())->clone ()};
+            return a_env.get_or_throw (node_symbol->symbol ())->clone ();
 
         }
     case node_type_enum::LIST:
@@ -111,7 +175,7 @@ eval_ast (ast_node::ptr node, const environment& a_env)
 
 ///////////////////////////////
 ast
-EVAL (ast a_ast, const environment& a_env)
+EVAL (ast a_ast, environment& a_env)
 {
     return { eval_impl (std::move (a_ast.m_root), a_env) };
 }
@@ -125,21 +189,9 @@ PRINT (ast&& a_ast)
 
 ///////////////////////////////
 void
-rep ()
+rep (environment& env)
 {
-    static environment repl_env;
-    static class env_init {
-    public:
-        env_init ()
-        {
-            env_add_builtin (repl_env, "+", builtin_plus);
-            env_add_builtin (repl_env, "-", builtin_minus);
-            env_add_builtin (repl_env, "*", builtin_mul);
-            env_add_builtin (repl_env, "/", builtin_div);
-        }
-    } _;
-
-    PRINT (EVAL ( READ (), repl_env));
+    PRINT (EVAL ( READ (), env));
 }
 
 ///////////////////////////////
@@ -148,11 +200,17 @@ main(int, char**)
 {
     try
     {
+        environment env;
+        env_add_builtin (env, "+", builtin_plus);
+        env_add_builtin (env, "-", builtin_minus);
+        env_add_builtin (env, "*", builtin_mul);
+        env_add_builtin (env, "/", builtin_div);
+
         for (;;)
         {
             try
             {
-                rep();
+                rep (env);
             }
             catch (const mal_exception_parse_error &)
             {

@@ -3,6 +3,7 @@
 #include "ast.h"
 #include "exceptions.h"
 
+#include <unordered_map>
 #include <map>
 #include <memory>
 
@@ -10,19 +11,29 @@
 class environment
 {
 public:
-	environment ();
+	environment (const environment* outer = nullptr);
 
-	const ast_node* symbol_lookup (const std::string &symbol) const noexcept;
+	const environment* find (const std::string &symbol) const;
+	const ast_node* set (const std::string& symbol, std::unique_ptr<ast_node> val);
 
-	// throws mal_exception_eval_no_symbol
-	const ast_node* symbol_lookup_or_throw (const std::string &symbol) const;
+	const ast_node* get (const std::string& symbol) const;
+	const ast_node* get_or_throw (const std::string& symbol) const;
 
 private:
-	inline void env_add_builtin (const std::string& symbol, ast_node_callable_builtin::builtin_fn fn)
-	{
-	    m_env.insert (std::make_tuple (symbol, std::make_unique<ast_node_callable_builtin> (symbol, fn)));
-	}
+	environment(const environment&) = delete;
+	environment& operator = (const environment&) = delete;
 
-	using symbol_lookup_map = std::map <std::string, std::unique_ptr<ast_node>>;
-	symbol_lookup_map m_env;
+	using symbol_lookup_map = std::unordered_map <std::string, std::unique_ptr<ast_node>>;
+	symbol_lookup_map m_data;
+	const environment* m_outer = nullptr;
 };
+
+inline void env_add_builtin (environment& env, const std::string& symbol, ast_node_callable_builtin::builtin_fn fn)
+{
+	env.set (symbol, std::make_unique<ast_node_callable_builtin> (symbol, fn));
+}
+
+ast_node::ptr builtin_plus (const call_arguments& args);
+ast_node::ptr builtin_minus (const call_arguments& args);
+ast_node::ptr builtin_div (const call_arguments& args);
+ast_node::ptr builtin_mul (const call_arguments& args);
