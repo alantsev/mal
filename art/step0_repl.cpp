@@ -76,7 +76,7 @@ main(int, char**)
             rep();
         }
     }
-    catch (const mal_exception&)
+    catch (const mal_exception_stop&)
     {
     }
     std::cout << std::endl;

@@ -121,6 +121,6 @@ environment::get_or_throw (const std::string& symbol) const
     if (m_outer)
         return m_outer->get_or_throw (symbol);
 
-    raise<mal_exception_eval_no_symbol> ();
+    raise<mal_exception_eval_no_symbol> (symbol);
     return nullptr;
 }

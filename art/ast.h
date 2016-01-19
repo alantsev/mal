@@ -74,14 +74,14 @@ public:
     T* as_or_throw ()
     {
         if (type () != T::GET_TYPE ())
-            raise<TException> ();
+            raise<TException> (this->to_string ());
         return static_cast<T*> (this);
     }
     template <typename T, typename TException>
     const T* as_or_throw () const
     {
         if (type () != T::GET_TYPE ())
-            raise<TException> ();
+            raise<TException> (this->to_string ());
         return static_cast<const T*> (this);
     }
 
