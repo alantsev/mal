@@ -25,7 +25,24 @@ read_str (std::string line)
       }
       else
       {
-        builder.add_symbol (line.substr (from, to - from - 1));
+        std::string token = line.substr (from, to - from - 1);
+        if (token == "false")
+        {
+          builder.add_bool (false);
+        }
+        else if (token == "true")
+        {
+          builder.add_bool (true);
+        }
+        else if (token == "nil")
+        {
+          builder.add_nil ();
+        }
+        else
+        {
+          builder.add_symbol (std::move (token));
+        }
+
       }
     }
   };

@@ -16,6 +16,8 @@ enum class node_type_enum
   SYMBOL,
   STRING,
   INT,
+  BOOL,
+  NIL,
   LIST,
   VECTOR,
   CALLABLE,
@@ -171,6 +173,46 @@ protected:
 
 private:
   int m_value;
+};
+
+///////////////////////////////
+class ast_node_atom_bool : public ast_node_atom <node_type_enum::BOOL>
+{
+public:
+  ast_node_atom_bool (bool value);
+
+  std::string to_string () const override;
+  bool value () const
+  {
+    return m_value;
+  }
+  explicit operator bool () const
+  {
+    return m_value;
+  }
+
+protected:
+  ast_node::mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_atom_bool> (m_value);
+  }
+
+private:
+  bool m_value;
+};
+
+///////////////////////////////
+class ast_node_atom_nil : public ast_node_atom <node_type_enum::NIL>
+{
+public:
+  ast_node_atom_nil () = default;
+  std::string to_string () const override;
+
+protected:
+  ast_node::mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_atom_nil> ();
+  }
 };
 
 ///////////////////////////////
@@ -362,6 +404,9 @@ public:
 
   ast_builder& add_symbol (std::string);
   ast_builder& add_int (int);
+
+  ast_builder& add_bool (bool val);
+  ast_builder& add_nil ();
 
   ast build();
 

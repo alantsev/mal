@@ -80,6 +80,29 @@ ast_node_atom_int::to_string () const // override
 }
 
 ///////////////////////////////
+/// ast_node_atom_bool class
+///////////////////////////////
+ast_node_atom_bool::ast_node_atom_bool (bool value)
+	: m_value (value)
+{}
+
+///////////////////////////////
+std::string
+ast_node_atom_bool::to_string () const
+{
+	return m_value ? "true" : "false";
+}
+
+///////////////////////////////
+/// ast_node_atom_nil class
+///////////////////////////////
+std::string
+ast_node_atom_nil::to_string () const
+{
+	return "nil";
+}
+
+///////////////////////////////
 /// ast_node_callable_builtin class
 ///////////////////////////////
 ast_node_callable_builtin::ast_node_callable_builtin (std::string signature, ast_node_callable_builtin::builtin_fn fn)
@@ -167,6 +190,25 @@ ast_builder::add_int (int value)
   m_current_stack.back ()->add_child (std::move (child));
   return *this;
 }
+
+///////////////////////////////
+ast_builder&
+ast_builder::add_bool (bool value)
+{
+  std::unique_ptr<ast_node_atom_bool> child { new ast_node_atom_bool { value } };
+  m_current_stack.back ()->add_child (std::move (child));
+  return *this;
+}
+
+///////////////////////////////
+ast_builder&
+ast_builder::add_nil ()
+{
+  std::unique_ptr<ast_node_atom_nil> child { new ast_node_atom_nil {} };
+  m_current_stack.back ()->add_child (std::move (child));
+  return *this;
+}
+
 
 ///////////////////////////////
 ast 
