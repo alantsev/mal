@@ -81,9 +81,9 @@ read_str (std::string line)
 }
 
 std::string 
-pr_str (ast a_ast)
+pr_str (ast tree)
 {
-  if (!a_ast.m_root)
+  if (!tree)
     return {};
-  return a_ast.m_root->to_string ();
+  return tree->to_string ();
 }

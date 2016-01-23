@@ -44,7 +44,7 @@ READ ()
 }
 
 ///////////////////////////////
-ast_node::ptr
+ast
 apply (const ast_node_list* callable_list)
 {
     const size_t list_size = callable_list->size ();
@@ -57,17 +57,17 @@ apply (const ast_node_list* callable_list)
 }
 
 ///////////////////////////////
-ast_node::ptr
-eval_ast (ast_node::ptr node, const environment& a_env); // fwd decl
+ast
+eval_ast (ast node, const environment& a_env); // fwd decl
 
 ///////////////////////////////
-ast_node::ptr
-eval_impl (ast_node::ptr root, const environment& a_env)
+ast
+eval_impl (ast root, const environment& a_env)
 {
     if (root->type () != node_type_enum::LIST)
         return { eval_ast (std::move (root), a_env) };
 
-    ast_node::ptr new_node = eval_ast (std::move (root), a_env);
+    ast new_node = eval_ast (root, a_env);
     auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
 
     return apply (new_node_list);
@@ -75,8 +75,8 @@ eval_impl (ast_node::ptr root, const environment& a_env)
 
 
 ///////////////////////////////
-ast_node::ptr
-eval_ast (ast_node::ptr node, const environment& a_env)
+ast
+eval_ast (ast node, const environment& a_env)
 {
     switch (node->type ())
     {
@@ -84,43 +84,41 @@ eval_ast (ast_node::ptr node, const environment& a_env)
         {
             // as_or_throw ?
             const auto& node_symbol = node->as<ast_node_atom_symbol> ();
-            return {a_env.get_or_throw (node_symbol->symbol ())->clone ()};
+            return {a_env.get_or_throw (node_symbol->symbol ())};
 
         }
     case node_type_enum::LIST:
         {
             // as_or_throw ?
             auto&& node_list = node->as<ast_node_list> ();
-            node_list->map ([&a_env] (ast_node::ptr v) { return std::move (eval_impl (std::move (v), a_env));});
-            break;
+            return node_list->map ([&a_env] (ast_node::ptr v) { return eval_impl (v, a_env);});
         }
     case node_type_enum::VECTOR:
         {
             // as_or_throw ?
             auto&& node_vector = node->as<ast_node_vector> ();
-            node_vector->map ([&a_env] (ast_node::ptr v) { return std::move (eval_impl (std::move (v), a_env));});
-            break;
+            return node_vector->map ([&a_env] (ast_node::ptr v) { return eval_impl (v, a_env);});
         }
 
     default:
         break;
     }
 
-    return std::move (node);
+    return node;
 }
 
 ///////////////////////////////
 ast
-EVAL (ast a_ast, const environment& a_env)
+EVAL (ast tree, const environment& a_env)
 {
-    return { eval_impl (std::move (a_ast.m_root), a_env) };
+    return eval_impl (tree, a_env);
 }
 
 ///////////////////////////////
 void
-PRINT (ast&& a_ast)
+PRINT (ast tree)
 {
-    printline (pr_str (std::move (a_ast)));
+    printline (pr_str (tree));
 }
 
 ///////////////////////////////

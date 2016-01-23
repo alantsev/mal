@@ -48,13 +48,12 @@ public:
 class ast_node
 {
 public:
-  using ptr = std::unique_ptr<ast_node>;
+  using ptr = std::shared_ptr<const ast_node>;
 
   ast_node () = default;
   virtual ~ast_node () = default;
   virtual std::string to_string () const = 0;
   virtual node_type_enum type () const = 0;
-  virtual ast_node::ptr clone () const = 0;
 
   //
   template <typename T>
@@ -100,6 +99,10 @@ public:
     return static_cast<const T*> (this);
   }
 
+protected:
+  using mutable_ptr = std::shared_ptr<ast_node>;
+  virtual ast_node::mutable_ptr clone () const = 0;
+
 private:
   ast_node (const ast_node&) = delete;
   ast_node& operator = (const ast_node&) = delete;
@@ -132,14 +135,16 @@ class ast_node_atom_symbol : public ast_node_atom <node_type_enum::SYMBOL>
 public:
   ast_node_atom_symbol (std::string a_symbol);
   std::string to_string () const override;
-  ast_node::ptr clone () const override
-  {
-    return ast_node::ptr (new ast_node_atom_symbol (m_symbol));
-  }
 
   const std::string& symbol () const
   {
     return m_symbol;
+  }
+
+protected:
+  ast_node::mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_atom_symbol> (m_symbol);
   }
 
 private:
@@ -153,14 +158,15 @@ public:
   ast_node_atom_int (int a_value);
 
   std::string to_string () const override;
-  ast_node::ptr clone () const override
-  {
-    return ast_node::ptr (new ast_node_atom_int (m_value));
-  }
-
   int value () const
   {
     return m_value;
+  }
+
+protected:
+  ast_node::mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_atom_int> (m_value);
   }
 
 private:
@@ -181,24 +187,35 @@ public:
     m_children.push_back (std::move (child));
   }
 
-  const ast_node* operator [] (size_t index) const
+  ast_node::ptr operator [] (size_t index) const
   {
     assert (index < size ());
-    return m_children[index].get ();
+    return m_children[index];
   }
 
   template <typename Fn>
-  void map (const Fn& fn)
+  ast_node::ptr map (const Fn& fn) const
   {
-    for (auto && v : m_children)
-    {
-      auto newV = fn (std::move (v));
-      v = std::move (newV);
-    }
+    ast_node::mutable_ptr retVal = this->clone ();
+
+    auto ptr = static_cast<ast_node_container_base*> (retVal.get ());
+    ptr->map_impl (fn);
+
+    return retVal;
   }
 
 protected:
   std::vector<ast_node::ptr> m_children;
+
+private:
+  template <typename Fn>
+  void map_impl (const Fn& fn)
+  {
+    for (auto && v : m_children)
+    {
+      v = fn (v);
+    }
+  }
 };
 
 ///////////////////////////////
@@ -216,15 +233,17 @@ public:
     return NODE_TYPE;
   }
 
-  ast_node::ptr clone () const override
+protected:
+  ast_node::mutable_ptr clone () const override
   {
-    auto new_list = std::make_unique<derived> ();
+    auto new_list = std::make_shared<derived> ();
     for (auto &&v : m_children)
     {
-      new_list->m_children.push_back (v->clone ());
+      new_list->m_children.push_back (v);
     }
-    return ast_node::ptr (new_list.release ());
+    return new_list;
   }
+
 };
 
 ///////////////////////////////
@@ -287,12 +306,14 @@ public:
   {
     return m_signature;
   }
-  ast_node::ptr clone () const override
-  {
-    return ast_node::ptr (new ast_node_callable_builtin (m_signature, m_fn));
-  }
 
   ast_node::ptr call (const call_arguments& args) const override;
+
+protected:
+  ast_node::mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_callable_builtin> (m_signature, m_fn);
+  }
 
 private:
   std::string m_signature;
@@ -300,9 +321,31 @@ private:
 };
 
 ///////////////////////////////
-struct ast
+class ast
 {
-  ast_node::ptr m_root;
+public:
+  // implicit by intention
+  ast (ast_node::ptr node = nullptr)
+    : m_node (node)
+  {}
+
+  ast_node::ptr operator -> () const
+  {
+    return m_node;
+  }
+
+  explicit operator bool () const
+  {
+    return !!m_node;
+  }
+
+  operator ast_node::ptr () const
+  {
+    return m_node;
+  }
+
+private:
+  ast_node::ptr m_node;
 };
 
 ///////////////////////////////

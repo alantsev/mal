@@ -87,22 +87,19 @@ environment::find (const std::string &symbol) const
 }
 
 ///////////////////////////////
-const ast_node* 
-environment::set (const std::string& symbol, std::unique_ptr<ast_node> val)
+void
+environment::set (const std::string& symbol, ast_node::ptr val)
 {
-    // TODO - return shared ptr here
-    const ast_node* retVal = val.get ();
-    m_data[symbol] = std::move (val);
-    return retVal;
+    m_data[symbol] = val;
 }
 
 ///////////////////////////////
-const ast_node*
+ast_node::ptr
 environment::get (const std::string& symbol) const
 {
     auto it = m_data.find (symbol);
     if (it != m_data.end ())
-        return it->second.get ();
+        return it->second;
 
     if (m_outer)
         return m_outer->get (symbol);
@@ -111,12 +108,12 @@ environment::get (const std::string& symbol) const
 }
 
 ///////////////////////////////
-const ast_node*
+ast_node::ptr
 environment::get_or_throw (const std::string& symbol) const
 {
     auto it = m_data.find (symbol);
     if (it != m_data.end ())
-        return it->second.get ();
+        return it->second;
 
     if (m_outer)
         return m_outer->get_or_throw (symbol);

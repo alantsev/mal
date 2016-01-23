@@ -42,7 +42,7 @@ READ (const std::string& prompt)
 }
 
 ///////////////////////////////
-ast_node::ptr
+ast
 apply (const ast_node_list* callable_list)
 {
   const size_t list_size = callable_list->size ();
@@ -51,22 +51,22 @@ apply (const ast_node_list* callable_list)
 
   auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
-  return callable_node->call (ast_node_list::list_call_arguments (callable_list, 1, list_size - 1));
+  return { callable_node->call (ast_node_list::list_call_arguments (callable_list, 1, list_size - 1)) };
 }
 
 ///////////////////////////////
-ast_node::ptr
-eval_ast (ast_node::ptr node, environment& a_env); // fwd decl
+ast
+eval_ast (ast tree, environment& a_env); // fwd decl
 
 ///////////////////////////////
-ast_node::ptr
-eval_impl (ast_node::ptr root, environment& a_env)
+ast
+eval_impl (ast tree, environment& a_env)
 {
-  if (root->type () != node_type_enum::LIST)
-    return eval_ast (std::move (root), a_env);
+  if (tree->type () != node_type_enum::LIST)
+    return eval_ast (tree, a_env);
 
   // not as_or_throw - we know the type
-  auto root_list = root->as<ast_node_list> ();
+  auto root_list = tree->as<ast_node_list> ();
 
   // apply special symbols
   if (root_list->size () > 0)
@@ -85,11 +85,10 @@ eval_impl (ast_node::ptr root, environment& a_env)
           raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
 
         const auto& key = (*root_list)[1]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
-        // TODO - do we really need clone here???
-        ast_node::ptr value = eval_impl ((*root_list)[2]->clone (), a_env);
 
-        // TODO - get rid of clone here!!!
-        return a_env.set (key, std::move (value))->clone ();
+        ast_node::ptr value = eval_impl ((*root_list)[2], a_env);
+        a_env.set (key, value);
+        return value;
       };
 
       // 
@@ -121,14 +120,12 @@ eval_impl (ast_node::ptr root, environment& a_env)
         for (size_t i = 0, e = let_bindings->size(); i < e; i += 2)
         {
           const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
-          // TODO - do we really need clone here???
-          ast_node::ptr value = eval_impl ((*let_bindings)[i + 1]->clone (), let_env);
+          ast_node::ptr value = eval_impl ((*let_bindings)[i + 1], let_env);
 
-          let_env.set (key, std::move (value));
+          let_env.set (key, value);
         }
 
-        // TODO - get rid of clone here
-        return eval_impl ((*root_list)[2]->clone (), let_env);
+        return eval_impl ((*root_list)[2], let_env);
       };
 
 
@@ -144,63 +141,61 @@ eval_impl (ast_node::ptr root, environment& a_env)
   }
 
   // default apply
-  ast_node::ptr new_node = eval_ast (std::move (root), a_env);
+  ast_node::ptr new_node = eval_ast (tree, a_env);
   auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
   return apply (new_node_list);
 }
 
 
 ///////////////////////////////
-ast_node::ptr
-eval_ast (ast_node::ptr node, environment& a_env)
+ast
+eval_ast (ast tree, environment& a_env)
 {
-  auto fn_handle_container = [&a_env](ast_node_container_base* container)
+  auto fn_handle_container = [&a_env](const ast_node_container_base* container)
   {
-    // FIXME - make here clone if necessary - before call
-    container->map ([&a_env] (ast_node::ptr v) { return std::move (eval_impl (std::move (v), a_env));});
+    // TODO - add here optimization to do not clone underlying node if the current pointer is unique!
+    return container->map ([&a_env] (ast_node::ptr v) { return eval_impl (v, a_env);});
   };
 
-  switch (node->type ())
+  switch (tree->type ())
   {
   case node_type_enum::SYMBOL:
     {
       // not as_or_throw - we know the type
-      const auto& node_symbol = node->as<ast_node_atom_symbol> ();
-      return a_env.get_or_throw (node_symbol->symbol ())->clone ();
+      const auto& node_symbol = tree->as<ast_node_atom_symbol> ();
+      return a_env.get_or_throw (node_symbol->symbol ());
 
     }
   case node_type_enum::LIST:
     {
       // not as_or_throw - we know the type
-      fn_handle_container (node->as<ast_node_list> ());
-      break;
+      return fn_handle_container (tree->as<ast_node_list> ());
     }
   case node_type_enum::VECTOR:
     {
       // not as_or_throw - we know the type
-      fn_handle_container (node->as<ast_node_vector> ());
-      break;
+      return fn_handle_container (tree->as<ast_node_vector> ());
     }
 
   default:
     break;
   }
 
-  return std::move (node);
+  return tree;
 }
 
 ///////////////////////////////
 ast
-EVAL (ast a_ast, environment& a_env)
+EVAL (ast tree, environment& a_env)
 {
-  return { eval_impl (std::move (a_ast.m_root), a_env) };
+  return { eval_impl (tree, a_env) };
 }
 
 ///////////////////////////////
 void
-PRINT (ast&& a_ast)
+PRINT (ast tree)
 {
-  printline (pr_str (std::move (a_ast)));
+  printline (pr_str (tree));
 }
 
 ///////////////////////////////

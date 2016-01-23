@@ -14,16 +14,16 @@ public:
 	environment (const environment* outer = nullptr);
 
 	const environment* find (const std::string &symbol) const;
-	const ast_node* set (const std::string& symbol, std::unique_ptr<ast_node> val);
+	void set (const std::string& symbol, ast_node::ptr val);
 
-	const ast_node* get (const std::string& symbol) const;
-	const ast_node* get_or_throw (const std::string& symbol) const;
+	ast_node::ptr get (const std::string& symbol) const;
+	ast_node::ptr get_or_throw (const std::string& symbol) const;
 
 private:
 	environment(const environment&) = delete;
 	environment& operator = (const environment&) = delete;
 
-	using symbol_lookup_map = std::unordered_map <std::string, std::unique_ptr<ast_node>>;
+	using symbol_lookup_map = std::unordered_map <std::string, ast_node::ptr>;
 	symbol_lookup_map m_data;
 	const environment* m_outer = nullptr;
 };
