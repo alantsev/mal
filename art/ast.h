@@ -224,6 +224,11 @@ public:
     return m_children.size ();
   }
 
+  bool empty () const
+  {
+    return size () == 0;
+  }
+
   void add_child (ast_node::ptr child)
   {
     m_children.push_back (std::move (child));
