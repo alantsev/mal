@@ -2,6 +2,11 @@
 #include "ast.h"
 
 ///////////////////////////////
+ast_node::ptr ast_node::nil_node {new ast_node_atom_nil {}};
+ast_node::ptr ast_node::true_node {new ast_node_atom_bool {true}};
+ast_node::ptr ast_node::false_node {new ast_node_atom_bool {false}};
+
+///////////////////////////////
 /// ast_node_list class
 ///////////////////////////////
 std::string 
@@ -129,10 +134,10 @@ ast_builder::ast_builder ()
 ast_builder&
 ast_builder::open_list ()
 {
-  std::unique_ptr<ast_node_list> child { new ast_node_list {} };
+  std::shared_ptr<ast_node_list> child { new ast_node_list {} };
   ast_node_list* child_ref = child.get ();
 
-  m_current_stack.back ()->add_child (std::move (child));
+  m_current_stack.back ()->add_child (child);
   m_current_stack.push_back (child_ref);
   return *this;
 }
@@ -153,10 +158,10 @@ ast_builder::close_list ()
 ast_builder&
 ast_builder::open_vector ()
 {
-  std::unique_ptr<ast_node_vector> child { new ast_node_vector {} };
+  std::shared_ptr<ast_node_vector> child { new ast_node_vector {} };
   ast_node_vector* child_ref = child.get ();
 
-  m_current_stack.back ()->add_child (std::move (child));
+  m_current_stack.back ()->add_child (child);
   m_current_stack.push_back (child_ref);
   return *this;
 }
@@ -177,8 +182,8 @@ ast_builder::close_vector ()
 ast_builder& 
 ast_builder::add_symbol (std::string value)
 {
-  std::unique_ptr<ast_node_atom_symbol> child { new ast_node_atom_symbol {std::move (value)} };
-  m_current_stack.back ()->add_child (std::move (child));
+  ast_node::ptr child { new ast_node_atom_symbol {std::move (value)} };
+  m_current_stack.back ()->add_child (child);
   return *this;
 }
 
@@ -186,8 +191,8 @@ ast_builder::add_symbol (std::string value)
 ast_builder& 
 ast_builder::add_int (int value)
 {
-  std::unique_ptr<ast_node_atom_int> child { new ast_node_atom_int { value } };
-  m_current_stack.back ()->add_child (std::move (child));
+  ast_node::ptr child { new ast_node_atom_int { value } };
+  m_current_stack.back ()->add_child (child);
   return *this;
 }
 
@@ -195,8 +200,7 @@ ast_builder::add_int (int value)
 ast_builder&
 ast_builder::add_bool (bool value)
 {
-  std::unique_ptr<ast_node_atom_bool> child { new ast_node_atom_bool { value } };
-  m_current_stack.back ()->add_child (std::move (child));
+  m_current_stack.back ()->add_child (value ? ast_node::true_node : ast_node::false_node);
   return *this;
 }
 
@@ -204,8 +208,7 @@ ast_builder::add_bool (bool value)
 ast_builder&
 ast_builder::add_nil ()
 {
-  std::unique_ptr<ast_node_atom_nil> child { new ast_node_atom_nil {} };
-  m_current_stack.back ()->add_child (std::move (child));
+  m_current_stack.back ()->add_child (ast_node::nil_node);
   return *this;
 }
 

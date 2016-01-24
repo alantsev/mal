@@ -146,11 +146,21 @@ eval_impl (ast tree, environment& a_env)
     return eval_impl ((*root_list)[list_size - 1], a_env);
   };
 
-/*
-  auto fn_handle_if = [root_list, &a_env]()
+  auto fn_handle_if = [root_list, &a_env] () -> ast
   {
-    // FIXME
-//    return nullptr;
+    const size_t list_size = root_list->size ();
+    if (list_size < 3 || list_size > 4)
+      raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+    auto&& condNode = (*root_list)[1];
+    const bool cond = !(condNode == ast_node::nil_node) && !(condNode == ast_node::false_node);
+
+    if (cond)
+      return eval_impl((*root_list)[2], a_env);
+    else if (list_size == 4)
+      return eval_impl((*root_list)[3], a_env);
+
+    return ast_node::nil_node;
   };
 
   auto fn_handle_fn = [root_list, &a_env]()
@@ -158,7 +168,6 @@ eval_impl (ast tree, environment& a_env)
     // FIXME
   //  return nullptr;
   };
-*/
 
   // apply special symbols
   // not as_or_throw - we know the type
@@ -179,7 +188,7 @@ eval_impl (ast tree, environment& a_env)
   }
   else if (symbol == "if")
   {
-//    return fn_handle_if ();
+    return fn_handle_if ();
   }
   else if (symbol == "fn*")
   {

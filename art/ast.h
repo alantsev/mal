@@ -52,6 +52,11 @@ class ast_node
 public:
   using ptr = std::shared_ptr<const ast_node>;
 
+  static ptr nil_node;
+  static ptr true_node;
+  static ptr false_node;
+
+  //
   ast_node () = default;
   virtual ~ast_node () = default;
   virtual std::string to_string () const = 0;
