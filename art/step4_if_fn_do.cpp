@@ -82,11 +82,6 @@ eval_impl (ast tree, environment& a_env)
   if (first->type () != node_type_enum::SYMBOL)
     return fn_default_list_apply ();
 
-  // apply special symbols
-  // not as_or_throw - we know the type
-  const auto first_symbol = first->as<ast_node_atom_symbol> ();
-  const auto& symbol = first_symbol->symbol ();
-
   //
   auto fn_handle_def = [root_list, &a_env]()
   {
@@ -137,6 +132,38 @@ eval_impl (ast tree, environment& a_env)
     return eval_impl ((*root_list)[2], let_env);
   };
 
+  auto fn_handle_do = [root_list, &a_env]()
+  {
+    const size_t list_size = root_list->size ();
+    if (list_size < 2)
+      raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+    for (size_t i = 1, e = list_size - 1; i < e; ++i)
+    {
+      /*retVal = */eval_impl ((*root_list)[i], a_env);
+    }
+
+    return eval_impl ((*root_list)[list_size - 1], a_env);
+  };
+
+/*
+  auto fn_handle_if = [root_list, &a_env]()
+  {
+    // FIXME
+//    return nullptr;
+  };
+
+  auto fn_handle_fn = [root_list, &a_env]()
+  {
+    // FIXME
+  //  return nullptr;
+  };
+*/
+
+  // apply special symbols
+  // not as_or_throw - we know the type
+  const auto first_symbol = first->as<ast_node_atom_symbol> ();
+  const auto& symbol = first_symbol->symbol ();
 
   if (symbol == "def!")
   {
@@ -148,17 +175,17 @@ eval_impl (ast tree, environment& a_env)
   }
   else if (symbol == "do")
   {
-    // FIXME
+    return fn_handle_do ();
   }
   else if (symbol == "if")
   {
-    // FIXME
+//    return fn_handle_if ();
   }
   else if (symbol == "fn*")
   {
-    // FIXME
+  //  return fn_handle_fn ();
   }
-  
+
   return fn_default_list_apply ();
 }
 
