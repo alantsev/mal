@@ -43,7 +43,7 @@ READ (const std::string& prompt)
 
 ///////////////////////////////
 ast
-apply (const ast_node_list* callable_list)
+apply (const ast_node_list* callable_list, const environment& a_env)
 {
   const size_t list_size = callable_list->size ();
   if (list_size == 0)
@@ -51,12 +51,15 @@ apply (const ast_node_list* callable_list)
 
   auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
-  return { callable_node->call (ast_node_list::list_call_arguments (callable_list, 1, list_size - 1)) };
+  return { callable_node->call (call_arguments (callable_list, 1, list_size - 1), a_env) };
 }
 
 ///////////////////////////////
 ast
 eval_ast (ast tree, environment& a_env); // fwd decl
+
+ast
+EVAL (ast tree, environment& a_env);
 
 ///////////////////////////////
 ast
@@ -70,7 +73,7 @@ eval_impl (ast tree, environment& a_env)
   {
     ast_node::ptr new_node = eval_ast (tree, a_env);
     auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
-    return apply (new_node_list);
+    return apply (new_node_list, a_env);
   };
 
   // not as_or_throw - we know the type
@@ -163,10 +166,22 @@ eval_impl (ast tree, environment& a_env)
     return ast_node::nil_node;
   };
 
-  auto fn_handle_fn = [root_list, &a_env]()
+  auto fn_handle_fn = [root_list, &a_env] () -> ast
   {
-    // FIXME
-  //  return nullptr;
+    const size_t list_size = root_list->size ();
+    if (list_size != 3)
+      raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+    auto&& bindsNode = (*root_list)[1];
+    auto&& astNode = (*root_list)[2];
+
+    auto evalFn = [] (ast_node::ptr tree, environment& env) -> ast_node::ptr
+    {
+      return EVAL (tree, env);
+    };
+
+    ast_node::ptr retVal = std::make_shared<ast_node_callable_lambda> (bindsNode, astNode, evalFn);
+    return retVal;
   };
 
   // apply special symbols
@@ -192,7 +207,7 @@ eval_impl (ast tree, environment& a_env)
   }
   else if (symbol == "fn*")
   {
-  //  return fn_handle_fn ();
+    return fn_handle_fn ();
   }
 
   return fn_default_list_apply ();
@@ -219,14 +234,11 @@ eval_ast (ast tree, environment& a_env)
 
     }
   case node_type_enum::LIST:
-    {
-      // not as_or_throw - we know the type
-      return fn_handle_container (tree->as<ast_node_list> ());
-    }
   case node_type_enum::VECTOR:
     {
       // not as_or_throw - we know the type
-      return fn_handle_container (tree->as<ast_node_vector> ());
+      ast_node::ptr node = tree;
+      return fn_handle_container (static_cast<const ast_node_container_base*> (node.get ()));
     }
 
   default:
@@ -292,6 +304,10 @@ main(int, char**)
       catch (const mal_exception_eval_not_list& ex)
       {
         printline (std::string ("not list: ") + ex.what ());
+      }
+      catch (const mal_exception_eval_not_symbol& ex)
+      {
+        printline (std::string ("not symbol: ") + ex.what ());
       }
       catch (const mal_exception_eval_invalid_arg& ex)
       {

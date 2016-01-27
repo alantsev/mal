@@ -1,5 +1,6 @@
 #include "MAL.h"
 #include "ast.h"
+#include "environment.h"
 
 ///////////////////////////////
 ast_node::ptr ast_node::nil_node {new ast_node_atom_nil {}};
@@ -110,16 +111,41 @@ ast_node_atom_nil::to_string () const
 ///////////////////////////////
 /// ast_node_callable_builtin class
 ///////////////////////////////
-ast_node_callable_builtin::ast_node_callable_builtin (std::string signature, ast_node_callable_builtin::builtin_fn fn)
-  : m_signature (std::move (signature))
-  , m_fn (fn)
-{}
+ast_node_callable_builtin::ast_node_callable_builtin (const std::string& signature, ast_node_callable_builtin::builtin_fn fn)
+  : m_fn (fn)
+{
+  m_signature = std::string ("#builtin-fn(") + (std::move (signature)) + ")";
+}
 
 ///////////////////////////////
 ast_node::ptr 
-ast_node_callable_builtin::call (const call_arguments& args) const
+ast_node_callable_builtin::call (const call_arguments& args, const environment&) const
 {
   return m_fn (args);
+}
+
+///////////////////////////////
+/// ast_node_callable_lambda class
+///////////////////////////////
+ast_node_callable_lambda::ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, eval_fn eval)
+  : m_binds (binds)
+  , m_ast (ast)
+  , m_eval (eval)
+{
+  const auto bind_type = m_binds->type ();
+  if (bind_type != node_type_enum::LIST && bind_type != node_type_enum::VECTOR)
+    raise<mal_exception_eval_not_list> (m_binds->to_string ());
+
+  m_binds_as_container = static_cast<const ast_node_container_base*> (m_binds.get ());
+}
+
+
+///////////////////////////////
+ast_node::ptr 
+ast_node_callable_lambda::call (const call_arguments& args, const environment& outer_env) const
+{
+  environment env (*m_binds_as_container, args, &outer_env);
+  return m_eval (m_ast, env);
 }
 
 ///////////////////////////////

@@ -6,8 +6,12 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 #include <assert.h>
+
+///////////////////////////////
+class environment;
 
 ///////////////////////////////
 enum class node_type_enum
@@ -30,21 +34,13 @@ class ast_node;
 class ast_node_atom_symbol;
 class ast_node_atom_int;
 
+class ast_node_container_base;
 class ast_node_list;
+class ast_node_vector;
 
 class ast_node_callable;
 class ast_node_callable_builtin;
-
-///////////////////////////////
-class call_arguments
-{
-public:
-  virtual ~call_arguments () = default;
-
-  virtual size_t size () const = 0;
-  virtual const ast_node& operator [] (size_t index) const = 0;
-};
-
+class ast_node_callable_lambda;
 
 ///////////////////////////////
 class ast_node
@@ -271,6 +267,32 @@ private:
 };
 
 ///////////////////////////////
+class call_arguments
+{
+public:
+  call_arguments (const ast_node_container_base* owner, size_t offset, size_t count)
+    : m_owner (owner)
+    , m_offset (offset)
+    , m_count (count)
+  {}
+
+  size_t size () const
+  {
+    return m_count;
+  }
+
+  ast_node::ptr operator [] (size_t index) const
+  {
+    return (*m_owner) [index + m_offset];
+  }
+
+private:
+  const ast_node_container_base* m_owner;
+  size_t m_offset;
+  size_t m_count;
+};
+
+///////////////////////////////
 template <node_type_enum NODE_TYPE, typename derived>
 class ast_node_container_crtp : public ast_node_container_base
 {
@@ -306,31 +328,6 @@ public:
 
   // FIXME - do we need it?
   ast_node::ptr clear_and_grab_first_child ();
-
-  ///////////////////////////////
-  class list_call_arguments : public call_arguments
-  {
-  public:
-    list_call_arguments (const ast_node_list* owner, size_t offset, size_t count)
-      : m_owner (owner)
-      , m_offset (offset)
-      , m_count (count)
-    {}
-    size_t size () const override
-    {
-      return m_count;
-    }
-
-    const ast_node& operator [] (size_t index) const override
-    {
-      return *(*m_owner) [index + m_offset];
-    }
-
-  private:
-    const ast_node_list* m_owner;
-    size_t m_offset;
-    size_t m_count;
-  };
 };
 
 ///////////////////////////////
@@ -344,7 +341,7 @@ public:
 class ast_node_callable : public ast_node_base  <node_type_enum::CALLABLE>
 {
 public:
-  virtual ast_node::ptr call (const call_arguments&) const = 0;
+  virtual ast_node::ptr call (const call_arguments&, const environment& outer_env) const = 0;
 };
 
 ///////////////////////////////
@@ -352,14 +349,14 @@ class ast_node_callable_builtin : public ast_node_callable
 {
 public:
   using builtin_fn = ast_node::ptr (*) (const call_arguments&);
-  ast_node_callable_builtin (std::string signature, builtin_fn fn);
+  ast_node_callable_builtin (const std::string &signature, builtin_fn fn);
 
   std::string to_string () const override
   {
-    return m_signature;
+    return m_signature ;
   }
 
-  ast_node::ptr call (const call_arguments& args) const override;
+  ast_node::ptr call (const call_arguments& args, const environment&) const override;
 
 protected:
   ast_node::mutable_ptr clone () const override
@@ -370,6 +367,34 @@ protected:
 private:
   std::string m_signature;
   builtin_fn m_fn;
+};
+
+///////////////////////////////
+class ast_node_callable_lambda : public ast_node_callable
+{
+public:
+  using eval_fn = std::function<ast_node::ptr (ast_node::ptr, environment&)>;
+  ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, eval_fn eval);
+
+  std::string to_string () const override
+  {
+    return "#callable-lambda" ;
+  }
+
+  ast_node::ptr call (const call_arguments& args, const environment& outer_env) const override;
+
+protected:
+  ast_node::mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_callable_lambda> (m_binds, m_ast, m_eval);
+  }
+
+private:
+  ast_node::ptr m_binds;
+  const ast_node_container_base* m_binds_as_container;
+
+  ast_node::ptr m_ast;
+  eval_fn m_eval;
 };
 
 ///////////////////////////////

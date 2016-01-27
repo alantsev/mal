@@ -45,7 +45,7 @@ READ ()
 
 ///////////////////////////////
 ast
-apply (const ast_node_list* callable_list)
+apply (const ast_node_list* callable_list, const environment& env)
 {
     const size_t list_size = callable_list->size ();
     if (list_size == 0)
@@ -53,7 +53,7 @@ apply (const ast_node_list* callable_list)
 
     auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
-    return callable_node->call (ast_node_list::list_call_arguments (callable_list, 1, list_size - 1));
+    return callable_node->call (call_arguments (callable_list, 1, list_size - 1), env);
 }
 
 ///////////////////////////////
@@ -70,7 +70,7 @@ eval_impl (ast root, const environment& a_env)
     ast new_node = eval_ast (root, a_env);
     auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
 
-    return apply (new_node_list);
+    return apply (new_node_list, a_env);
 }
 
 
