@@ -130,10 +130,12 @@ rep ()
     public:
         env_init ()
         {
-            env_add_builtin (repl_env, "+", builtin_plus);
-            env_add_builtin (repl_env, "-", builtin_minus);
-            env_add_builtin (repl_env, "*", builtin_mul);
-            env_add_builtin (repl_env, "/", builtin_div);
+            core ns;
+
+            for (auto&& c : ns.content ())
+            {
+              repl_env.set (c.first, c.second);
+            }
         }
     } _;
 

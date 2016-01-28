@@ -43,15 +43,3 @@ environment::environment (const TBindsVector& binds, const TExprsVector& exprs, 
     m_data[symbol] = exprs[i];
   }
 }
-
-///////////////////////////////
-inline void env_add_builtin (environment& env, const std::string& symbol, ast_node_callable_builtin::builtin_fn fn)
-{
-  env.set (symbol, std::make_unique<ast_node_callable_builtin> (symbol, fn));
-}
-
-///////////////////////////////
-ast_node::ptr builtin_plus (const call_arguments& args);
-ast_node::ptr builtin_minus (const call_arguments& args);
-ast_node::ptr builtin_div (const call_arguments& args);
-ast_node::ptr builtin_mul (const call_arguments& args);

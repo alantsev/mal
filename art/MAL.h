@@ -3,6 +3,7 @@
 #include "ast.h"
 #include "exceptions.h"
 #include "environment.h"
+#include "core.h"
 
 #include <assert.h>
 

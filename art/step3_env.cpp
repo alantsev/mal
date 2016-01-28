@@ -214,10 +214,12 @@ main(int, char**)
     const std::string prompt = "user> ";
 
     environment env;
-    env_add_builtin (env, "+", builtin_plus);
-    env_add_builtin (env, "-", builtin_minus);
-    env_add_builtin (env, "*", builtin_mul);
-    env_add_builtin (env, "/", builtin_div);
+    core ns;
+
+    for (auto&& c : ns.content ())
+    {
+      env.set (c.first, c.second);
+    }
 
     for (;;)
     {
