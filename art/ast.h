@@ -24,7 +24,8 @@ enum class node_type_enum
   NIL,
   LIST,
   VECTOR,
-  CALLABLE,
+  CALLABLE_BUILTIN,
+  CALLABLE_LAMBDA,
   NODE_TYPE_COUNT
 };
 
@@ -58,31 +59,33 @@ public:
   virtual std::string to_string () const = 0;
   virtual node_type_enum type () const = 0;
 
+  virtual bool operator == (const ast_node&) const = 0;
+
   //
   template <typename T>
   T* as ()
   {
-    assert (type () == T::GET_TYPE ());
+    assert (T::IS_VALID_TYPE (type ()));
     return static_cast<T*> (this);
   }
   template <typename T>
   const T* as () const
   {
-    assert (type () == T::GET_TYPE ());
+    assert (T::IS_VALID_TYPE (type ()));
     return static_cast<const T*> (this);
   }
 
   template <typename T, typename TException>
   T* as_or_throw ()
   {
-    if (type () != T::GET_TYPE ())
+    if (!T::IS_VALID_TYPE (type ()))
       raise<TException> (this->to_string ());
     return static_cast<T*> (this);
   }
   template <typename T, typename TException>
   const T* as_or_throw () const
   {
-    if (type () != T::GET_TYPE ())
+    if (!T::IS_VALID_TYPE (type ()))
       raise<TException> (this->to_string ());
     return static_cast<const T*> (this);
   }
@@ -90,26 +93,29 @@ public:
   template <typename T, typename TException>
   T* as_or_zero ()
   {
-    if (type () != T::GET_TYPE ())
+    if (!T::IS_VALID_TYPE (type ()))
       return nullptr;
     return static_cast<T*> (this);
   }
   template <typename T, typename TException>
   const T* as_or_zero () const
   {
-    if (type () != T::GET_TYPE ())
+    if (!T::IS_VALID_TYPE (type ()))
       return nullptr;
     return static_cast<const T*> (this);
   }
-
-protected:
-  using mutable_ptr = std::shared_ptr<ast_node>;
-  virtual ast_node::mutable_ptr clone () const = 0;
 
 private:
   ast_node (const ast_node&) = delete;
   ast_node& operator = (const ast_node&) = delete;
 };
+
+inline bool equals (const ast_node& left, const ast_node& right)
+{
+  if (left.type () != right.type ())
+    return false;
+  return left == right;
+}
 
 ///////////////////////////////
 template <node_type_enum NODE_TYPE>
@@ -121,9 +127,9 @@ public:
     return NODE_TYPE;
   }
 
-  static constexpr node_type_enum GET_TYPE ()
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
   {
-    return NODE_TYPE;
+    return NODE_TYPE == t;
   }
 };
 
@@ -144,10 +150,9 @@ public:
     return m_symbol;
   }
 
-protected:
-  ast_node::mutable_ptr clone () const override
+  bool operator == (const ast_node& rp) const override
   {
-    return std::make_shared<ast_node_atom_symbol> (m_symbol);
+    return m_symbol == rp.as<ast_node_atom_symbol> ()->m_symbol;
   }
 
 private:
@@ -166,10 +171,9 @@ public:
     return m_value;
   }
 
-protected:
-  ast_node::mutable_ptr clone () const override
+  bool operator == (const ast_node& rp) const override
   {
-    return std::make_shared<ast_node_atom_int> (m_value);
+    return m_value == rp.as<ast_node_atom_int> ()->m_value;
   }
 
 private:
@@ -177,29 +181,29 @@ private:
 };
 
 ///////////////////////////////
+template <bool VALUE>
 class ast_node_atom_bool : public ast_node_atom <node_type_enum::BOOL>
 {
 public:
-  ast_node_atom_bool (bool value);
+  std::string to_string () const override
+  {
+    return VALUE ? "true" : "false";
+  }
 
-  std::string to_string () const override;
   bool value () const
   {
-    return m_value;
+    return VALUE;
   }
   explicit operator bool () const
   {
-    return m_value;
+    return VALUE;
   }
 
-protected:
-  ast_node::mutable_ptr clone () const override
+  bool operator == (const ast_node& rp) const override
   {
-    return std::make_shared<ast_node_atom_bool> (m_value);
+    return this == &rp;
   }
 
-private:
-  bool m_value;
 };
 
 ///////////////////////////////
@@ -209,10 +213,9 @@ public:
   ast_node_atom_nil () = default;
   std::string to_string () const override;
 
-protected:
-  ast_node::mutable_ptr clone () const override
+  bool operator == (const ast_node& rp) const override
   {
-    return std::make_shared<ast_node_atom_nil> ();
+    return this == &rp;
   }
 };
 
@@ -244,7 +247,7 @@ public:
   template <typename Fn>
   ast_node::ptr map (const Fn& fn) const
   {
-    ast_node::mutable_ptr retVal = this->clone ();
+    mutable_ptr retVal = this->clone ();
 
     auto ptr = static_cast<ast_node_container_base*> (retVal.get ());
     ptr->map_impl (fn);
@@ -252,7 +255,32 @@ public:
     return retVal;
   }
 
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
+  {
+    return (t == node_type_enum::LIST) || (t == node_type_enum::VECTOR);
+  }
+
+  bool operator == (const ast_node& rp) const override
+  {
+    assert (type () == rp.type ());
+
+    auto rp_container = rp.as<ast_node_container_base> ();
+    if (size () != rp_container->size())
+      return false;
+
+    bool retVal = true;
+    for (size_t i = 0, e = size (); i < e && retVal; ++i)
+    {
+      retVal = retVal && equals (*(m_children[i]), *(rp_container->m_children[i]));
+    }
+
+    return retVal;
+  }
+
 protected:
+  using mutable_ptr = std::shared_ptr<ast_node>;
+  virtual mutable_ptr clone () const = 0;
+
   std::vector<ast_node::ptr> m_children;
 
 private:
@@ -302,13 +330,13 @@ public:
     return NODE_TYPE;
   }
 
-  static constexpr node_type_enum GET_TYPE ()
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
   {
-    return NODE_TYPE;
+    return NODE_TYPE == t;
   }
 
 protected:
-  ast_node::mutable_ptr clone () const override
+  mutable_ptr clone () const override
   {
     auto new_list = std::make_shared<derived> ();
     for (auto &&v : m_children)
@@ -325,9 +353,6 @@ class ast_node_list : public ast_node_container_crtp <node_type_enum::LIST, ast_
 {
 public:
   std::string to_string () const override;
-
-  // FIXME - do we need it?
-  ast_node::ptr clear_and_grab_first_child ();
 };
 
 ///////////////////////////////
@@ -338,10 +363,15 @@ public:
 };
 
 ///////////////////////////////
-class ast_node_callable : public ast_node_base  <node_type_enum::CALLABLE>
+class ast_node_callable : public ast_node
 {
 public:
   virtual ast_node::ptr call (const call_arguments&, const environment& outer_env) const = 0;
+
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
+  {
+    return (t == node_type_enum::CALLABLE_BUILTIN) || (t == node_type_enum::CALLABLE_LAMBDA);
+  }
 };
 
 ///////////////////////////////
@@ -358,10 +388,14 @@ public:
 
   ast_node::ptr call (const call_arguments& args, const environment&) const override;
 
-protected:
-  ast_node::mutable_ptr clone () const override
+  bool operator == (const ast_node& rp) const override
   {
-    return std::make_shared<ast_node_callable_builtin> (m_signature, m_fn);
+    return m_fn == rp.as<ast_node_callable_builtin> ()->m_fn;
+  }
+
+  node_type_enum type () const override
+  {
+    return node_type_enum::CALLABLE_BUILTIN;
   }
 
 private:
@@ -383,10 +417,15 @@ public:
 
   ast_node::ptr call (const call_arguments& args, const environment& outer_env) const override;
 
-protected:
-  ast_node::mutable_ptr clone () const override
+  bool operator == (const ast_node& rp) const override
   {
-    return std::make_shared<ast_node_callable_lambda> (m_binds, m_ast, m_eval);
+    auto rp_lambda = rp.as<ast_node_callable_lambda> ();
+    return equals (*m_binds, *rp_lambda->m_binds) && equals (*m_ast, *rp_lambda->m_ast);
+  }
+
+  node_type_enum type () const override
+  {
+    return node_type_enum::CALLABLE_LAMBDA;
   }
 
 private:

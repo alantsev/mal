@@ -4,8 +4,8 @@
 
 ///////////////////////////////
 ast_node::ptr ast_node::nil_node {new ast_node_atom_nil {}};
-ast_node::ptr ast_node::true_node {new ast_node_atom_bool {true}};
-ast_node::ptr ast_node::false_node {new ast_node_atom_bool {false}};
+ast_node::ptr ast_node::true_node {new ast_node_atom_bool<true> {}};
+ast_node::ptr ast_node::false_node {new ast_node_atom_bool<false> {}};
 
 ///////////////////////////////
 /// ast_node_list class
@@ -24,16 +24,6 @@ ast_node_list::to_string () const // override
   retVal += ")";
 
   return retVal;
-}
-
-///////////////////////////////
-ast_node::ptr
-ast_node_list::clear_and_grab_first_child () 
-{
-  assert (size () > 0);
-  ast_node::ptr retVal = std::move (m_children [0]);
-  m_children.clear ();
-  return std::move (retVal);
 }
 
 ///////////////////////////////
@@ -83,20 +73,6 @@ ast_node_atom_int::to_string () const // override
 {
   // FIXME
   return std::to_string (m_value);
-}
-
-///////////////////////////////
-/// ast_node_atom_bool class
-///////////////////////////////
-ast_node_atom_bool::ast_node_atom_bool (bool value)
-	: m_value (value)
-{}
-
-///////////////////////////////
-std::string
-ast_node_atom_bool::to_string () const
-{
-	return m_value ? "true" : "false";
 }
 
 ///////////////////////////////
@@ -253,9 +229,12 @@ ast_builder::build()
   if (level0_count == 0)
     return ast {};
 
-  ast retVal {std::move (m_current_stack.back()->as_or_throw<ast_node_list, mal_exception_parse_error> ()->clear_and_grab_first_child ())};
+  auto root = m_current_stack.back()->as_or_throw<ast_node_list, mal_exception_parse_error> ();
+
+  assert (root->size () > 0);
+  ast_node::ptr retVal = (*root) [0];
   m_current_stack.clear ();
   m_meta_root.reset ();
 
-  return std::move (retVal);
+  return retVal;
 }

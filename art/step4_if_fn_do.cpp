@@ -109,10 +109,8 @@ eval_impl (ast tree, environment& a_env)
     switch (root_list_arg_1->type ())
     {
     case node_type_enum::LIST:
-      let_bindings = root_list_arg_1->as<ast_node_list> ();
-      break;
     case node_type_enum::VECTOR:
-      let_bindings = root_list_arg_1->as<ast_node_vector> ();
+      let_bindings = root_list_arg_1->as<ast_node_container_base> ();
       break;
     default:
       raise<mal_exception_eval_invalid_arg> (root_list_arg_1->to_string ());
@@ -237,8 +235,7 @@ eval_ast (ast tree, environment& a_env)
   case node_type_enum::VECTOR:
     {
       // not as_or_throw - we know the type
-      ast_node::ptr node = tree;
-      return fn_handle_container (static_cast<const ast_node_container_base*> (node.get ()));
+      return fn_handle_container (tree->as<ast_node_container_base> ());
     }
 
   default:
