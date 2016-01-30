@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast.h"
+#include "ast_details.h"
 #include "exceptions.h"
 
 #include <unordered_map>

@@ -1,5 +1,6 @@
 #include "MAL.h"
 #include "ast.h"
+#include "ast_details.h"
 
 #include <string>
 #include <cctype>

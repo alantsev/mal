@@ -1,11 +1,15 @@
-#include <cstdio>
+#include "MAL.h"
+#include "reader.h"
+#include "ast.h"
+#include "exceptions.h"
+
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#include <cstdio>
 #include <iostream>
 #include <string>
 
-#include "MAL.h"
 
 static const char* PROMPT = "user> ";
 

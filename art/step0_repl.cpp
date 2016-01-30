@@ -6,6 +6,7 @@
 #include <string>
 
 #include "MAL.h"
+#include "exceptions.h"
 
 static const char* PROMPT = "user> ";
 

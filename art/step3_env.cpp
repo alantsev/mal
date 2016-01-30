@@ -1,11 +1,17 @@
-#include <cstdio>
+#include "MAL.h"
+#include "exceptions.h"
+#include "ast.h"
+#include "ast_details.h"
+#include "reader.h"
+#include "environment.h"
+#include "core.h"
+
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#include <cstdio>
 #include <iostream>
 #include <string>
-
-#include "MAL.h"
 
 ///////////////////////////////
 std::string 
@@ -43,7 +49,7 @@ READ (const std::string& prompt)
 
 ///////////////////////////////
 ast
-apply (const ast_node_list* callable_list, const environment& env)
+apply (const ast_node_list* callable_list)
 {
   const size_t list_size = callable_list->size ();
   if (list_size == 0)
@@ -51,16 +57,16 @@ apply (const ast_node_list* callable_list, const environment& env)
 
   auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
-  return { callable_node->call (call_arguments (callable_list, 1, list_size - 1), env) };
+  return callable_node->call (call_arguments (callable_list, 1, list_size - 1));
 }
 
 ///////////////////////////////
 ast
-eval_ast (ast tree, environment& a_env); // fwd decl
+eval_ast (ast tree, environment::ptr a_env); // fwd decl
 
 ///////////////////////////////
 ast
-eval_impl (ast tree, environment& a_env)
+EVAL (ast tree, environment::ptr a_env)
 {
   if (tree->type () != node_type_enum::LIST)
     return eval_ast (tree, a_env);
@@ -86,8 +92,8 @@ eval_impl (ast tree, environment& a_env)
 
         const auto& key = (*root_list)[1]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
 
-        ast_node::ptr value = eval_impl ((*root_list)[2], a_env);
-        a_env.set (key, value);
+        ast_node::ptr value = EVAL ((*root_list)[2], a_env);
+        a_env->set (key, value);
         return value;
       };
 
@@ -112,7 +118,7 @@ eval_impl (ast tree, environment& a_env)
         };
 
         //
-        environment let_env (std::addressof (a_env));
+        auto let_env = environment::make (a_env);
 
         if (let_bindings->size () % 2 != 0)
           raise<mal_exception_eval_invalid_arg> (let_bindings->to_string ());
@@ -120,12 +126,12 @@ eval_impl (ast tree, environment& a_env)
         for (size_t i = 0, e = let_bindings->size(); i < e; i += 2)
         {
           const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
-          ast_node::ptr value = eval_impl ((*let_bindings)[i + 1], let_env);
+          ast_node::ptr value = EVAL ((*let_bindings)[i + 1], let_env);
 
-          let_env.set (key, value);
+          let_env->set (key, value);
         }
 
-        return eval_impl ((*root_list)[2], let_env);
+        return EVAL ((*root_list)[2], let_env);
       };
 
 
@@ -143,18 +149,18 @@ eval_impl (ast tree, environment& a_env)
   // default apply
   ast_node::ptr new_node = eval_ast (tree, a_env);
   auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
-  return apply (new_node_list, a_env);
+  return apply (new_node_list);
 }
 
 
 ///////////////////////////////
 ast
-eval_ast (ast tree, environment& a_env)
+eval_ast (ast tree, environment::ptr a_env)
 {
   auto fn_handle_container = [&a_env](const ast_node_container_base* container)
   {
     // TODO - add here optimization to do not clone underlying node if the current pointer is unique!
-    return container->map ([&a_env] (ast_node::ptr v) { return eval_impl (v, a_env);});
+    return container->map ([&a_env] (ast_node::ptr v) { return EVAL (v, a_env);});
   };
 
   switch (tree->type ())
@@ -163,7 +169,7 @@ eval_ast (ast tree, environment& a_env)
     {
       // not as_or_throw - we know the type
       const auto& node_symbol = tree->as<ast_node_atom_symbol> ();
-      return a_env.get_or_throw (node_symbol->symbol ());
+      return a_env->get_or_throw (node_symbol->symbol ());
 
     }
   case node_type_enum::LIST:
@@ -185,13 +191,6 @@ eval_ast (ast tree, environment& a_env)
 }
 
 ///////////////////////////////
-ast
-EVAL (ast tree, environment& a_env)
-{
-  return { eval_impl (tree, a_env) };
-}
-
-///////////////////////////////
 void
 PRINT (ast tree)
 {
@@ -200,7 +199,7 @@ PRINT (ast tree)
 
 ///////////////////////////////
 void
-rep (const std::string& prompt, environment& env)
+rep (const std::string& prompt, environment::ptr env)
 {
   PRINT (EVAL ( READ (prompt), env));
 }
@@ -213,12 +212,12 @@ main(int, char**)
   {
     const std::string prompt = "user> ";
 
-    environment env;
+    auto env = environment::make ();
     core ns;
 
     for (auto&& c : ns.content ())
     {
-      env.set (c.first, c.second);
+      env->set (c.first, c.second);
     }
 
     for (;;)

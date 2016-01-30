@@ -1,11 +1,17 @@
-#include <cstdio>
+#include "MAL.h"
+#include "exceptions.h"
+#include "ast.h"
+#include "ast_details.h"
+#include "reader.h"
+#include "environment.h"
+#include "core.h"
+
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#include <cstdio>
 #include <iostream>
 #include <string>
-
-#include "MAL.h"
 
 static const char* PROMPT = "user> ";
 
@@ -45,7 +51,7 @@ READ ()
 
 ///////////////////////////////
 ast
-apply (const ast_node_list* callable_list, const environment& env)
+apply (const ast_node_list* callable_list)
 {
     const size_t list_size = callable_list->size ();
     if (list_size == 0)
@@ -53,16 +59,16 @@ apply (const ast_node_list* callable_list, const environment& env)
 
     auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
-    return callable_node->call (call_arguments (callable_list, 1, list_size - 1), env);
+    return callable_node->call (call_arguments (callable_list, 1, list_size - 1));
 }
 
 ///////////////////////////////
 ast
-eval_ast (ast node, const environment& a_env); // fwd decl
+eval_ast (ast node, environment::const_ptr a_env); // fwd decl
 
 ///////////////////////////////
 ast
-eval_impl (ast root, const environment& a_env)
+eval_impl (ast root, environment::const_ptr a_env)
 {
     if (root->type () != node_type_enum::LIST)
         return { eval_ast (std::move (root), a_env) };
@@ -70,13 +76,13 @@ eval_impl (ast root, const environment& a_env)
     ast new_node = eval_ast (root, a_env);
     auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
 
-    return apply (new_node_list, a_env);
+    return apply (new_node_list);
 }
 
 
 ///////////////////////////////
 ast
-eval_ast (ast node, const environment& a_env)
+eval_ast (ast node, environment::const_ptr a_env)
 {
     switch (node->type ())
     {
@@ -84,8 +90,7 @@ eval_ast (ast node, const environment& a_env)
         {
             // as_or_throw ?
             const auto& node_symbol = node->as<ast_node_atom_symbol> ();
-            return {a_env.get_or_throw (node_symbol->symbol ())};
-
+            return a_env->get_or_throw (node_symbol->symbol ());
         }
     case node_type_enum::LIST:
         {
@@ -109,7 +114,7 @@ eval_ast (ast node, const environment& a_env)
 
 ///////////////////////////////
 ast
-EVAL (ast tree, const environment& a_env)
+EVAL (ast tree, environment::const_ptr a_env)
 {
     return eval_impl (tree, a_env);
 }
@@ -125,7 +130,7 @@ PRINT (ast tree)
 void
 rep ()
 {
-    static environment repl_env;
+    static auto repl_env = environment::make ();
     static class env_init {
     public:
         env_init ()
@@ -134,7 +139,7 @@ rep ()
 
             for (auto&& c : ns.content ())
             {
-              repl_env.set (c.first, c.second);
+              repl_env->set (c.first, c.second);
             }
         }
     } _;

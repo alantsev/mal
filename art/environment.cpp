@@ -6,16 +6,16 @@
 ///////////////////////////////
 /// environment class
 ///////////////////////////////
-environment::environment (const environment* outer)
+environment::environment (hide_me, environment::const_ptr outer)
   : m_outer (outer)
 {}
 
 ///////////////////////////////
-const environment*
+environment::const_ptr
 environment::find (const std::string &symbol) const
 {
   if (m_data.count (symbol) > 0)
-    return this;
+    return shared_from_this ();
   if (m_outer)
     return m_outer->find (symbol);
 
