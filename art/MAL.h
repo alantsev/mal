@@ -16,6 +16,8 @@ class ast_node_container_base;
 class ast_node_list;
 class ast_node_vector;
 
+class call_arguments;
+
 class ast_node_callable;
 class ast_node_callable_builtin;
 class ast_node_callable_lambda;

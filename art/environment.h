@@ -20,9 +20,7 @@ public:
   using const_ptr = std::shared_ptr<const environment>;
   //
   environment (hide_me, environment::const_ptr outer);
-
-  template <typename TBindsVector, typename TExprsVector>
-  environment (hide_me, const TBindsVector& binds, const TExprsVector& exprs, environment::const_ptr outer);
+  environment (hide_me, const ast_node_container_base& binds, const call_arguments& exprs, environment::const_ptr outer);
 
 
   //
@@ -38,8 +36,7 @@ public:
     return std::make_shared<environment> (hide_me{}, outer);
   }
 
-  template <typename TBindsVector, typename TExprsVector>
-  static environment::ptr make (const TBindsVector& binds, const TExprsVector& exprs, environment::const_ptr outer = nullptr)
+  static environment::ptr make (const ast_node_container_base& binds, const call_arguments& exprs, environment::const_ptr outer = nullptr)
   {
     return std::make_shared<environment> (hide_me{}, binds, exprs, outer);
   }
@@ -53,18 +50,3 @@ private:
   environment::const_ptr m_outer;
 
 };
-
-///////////////////////////////
-template <typename TBindsVector, typename TExprsVector>
-environment::environment (hide_me, const TBindsVector& binds, const TExprsVector& exprs, environment::const_ptr outer)
-  : m_outer (outer)
-{
-  if (binds.size () != exprs.size ())
-    raise<mal_exception_eval_invalid_arg> ();
-
-  for (size_t i = 0, e = binds.size (); i < e; ++i)
-  {
-    auto symbol = binds[i]->template as_or_throw<ast_node_atom_symbol, mal_exception_eval_not_symbol> ()->symbol ();
-    m_data[symbol] = exprs[i];
-  }
-}
