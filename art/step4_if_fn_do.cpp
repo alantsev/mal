@@ -156,7 +156,7 @@ EVAL (ast tree, environment::ptr a_env)
     if (list_size < 3 || list_size > 4)
       raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
 
-    auto&& condNode = (*root_list)[1];
+    ast_node::ptr condNode = EVAL ((*root_list)[1], a_env);
     const bool cond = !(condNode == ast_node::nil_node) && !(condNode == ast_node::false_node);
 
     if (cond)

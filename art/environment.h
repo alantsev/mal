@@ -59,7 +59,9 @@ template <typename TBindsVector, typename TExprsVector>
 environment::environment (hide_me, const TBindsVector& binds, const TExprsVector& exprs, environment::const_ptr outer)
   : m_outer (outer)
 {
-  assert (binds.size () == exprs.size ());
+  if (binds.size () != exprs.size ())
+    raise<mal_exception_eval_invalid_arg> ();
+
   for (size_t i = 0, e = binds.size (); i < e; ++i)
   {
     auto symbol = binds[i]->template as_or_throw<ast_node_atom_symbol, mal_exception_eval_not_symbol> ()->symbol ();
