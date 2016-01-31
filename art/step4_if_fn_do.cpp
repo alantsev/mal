@@ -277,11 +277,15 @@ main(int, char**)
     {
       env->set (c.first, c.second);
     }
+    // define not function
+    EVAL (read_str ("(def! not (fn* (a) (if a false true)))"), env);
 
+    // repl
     for (;;)
     {
       try
       {
+
         rep (prompt, env);
       }
       catch (const mal_exception_parse_error& ex)
