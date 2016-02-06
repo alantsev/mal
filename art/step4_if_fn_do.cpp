@@ -86,11 +86,7 @@ EVAL (ast tree, environment::ptr a_env)
   // not as_or_throw - we know the type
   auto root_list = tree->as<ast_node_list> ();
   if (root_list->empty ())
-    return fn_default_list_apply ();
-
-  auto first = (*root_list)[0];
-  if (first->type () != node_type_enum::SYMBOL)
-    return fn_default_list_apply ();
+    return tree;
 
   //
   auto fn_handle_def = [root_list, &a_env]()
@@ -189,30 +185,34 @@ EVAL (ast tree, environment::ptr a_env)
     return retVal;
   };
 
-  // apply special symbols
-  // not as_or_throw - we know the type
-  const auto first_symbol = first->as<ast_node_atom_symbol> ();
-  const auto& symbol = first_symbol->symbol ();
+  auto first = (*root_list)[0];
+  if (first->type () == node_type_enum::SYMBOL)
+  {
+    // apply special symbols
+    // not as_or_throw - we know the type
+    const auto first_symbol = first->as<ast_node_atom_symbol> ();
+    const auto& symbol = first_symbol->symbol ();
 
-  if (symbol == "def!")
-  {
-    return fn_handle_def ();
-  }
-  else if (symbol == "let*")
-  {
-    return fn_handle_let ();
-  }
-  else if (symbol == "do")
-  {
-    return fn_handle_do ();
-  }
-  else if (symbol == "if")
-  {
-    return fn_handle_if ();
-  }
-  else if (symbol == "fn*")
-  {
-    return fn_handle_fn ();
+    if (symbol == "def!")
+    {
+      return fn_handle_def ();
+    }
+    else if (symbol == "let*")
+    {
+      return fn_handle_let ();
+    }
+    else if (symbol == "do")
+    {
+      return fn_handle_do ();
+    }
+    else if (symbol == "if")
+    {
+      return fn_handle_if ();
+    }
+    else if (symbol == "fn*")
+    {
+      return fn_handle_fn ();
+    }
   }
 
   return fn_default_list_apply ();

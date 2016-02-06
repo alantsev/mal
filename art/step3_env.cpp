@@ -74,75 +74,77 @@ EVAL (ast tree, environment::ptr a_env)
   // not as_or_throw - we know the type
   auto root_list = tree->as<ast_node_list> ();
 
-  // apply special symbols
-  if (root_list->size () > 0)
+  if (root_list->size () == 0)
   {
-    auto first = (*root_list)[0];
-    if (first->type () == node_type_enum::SYMBOL)
+    return tree;
+  }
+
+  // apply special symbols
+  auto first = (*root_list)[0];
+  if (first->type () == node_type_enum::SYMBOL)
+  {
+    // not as_or_throw - we know the type
+    const auto first_symbol = first->as<ast_node_atom_symbol> ();
+    const auto& symbol = first_symbol->symbol ();
+
+    //
+    auto fn_handle_def = [root_list, &a_env]()
     {
-      // not as_or_throw - we know the type
-      const auto first_symbol = first->as<ast_node_atom_symbol> ();
-      const auto& symbol = first_symbol->symbol ();
+      if (root_list->size () != 3)
+        raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+      const auto& key = (*root_list)[1]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
+
+      ast_node::ptr value = EVAL ((*root_list)[2], a_env);
+      a_env->set (key, value);
+      return value;
+    };
+
+    // 
+    auto fn_handle_let = [root_list, &a_env]()
+    {
+      if (root_list->size () != 3)
+        raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+      const ast_node_container_base* let_bindings = nullptr;
+      const auto root_list_arg_1 = (*root_list)[1];
+      switch (root_list_arg_1->type ())
+      {
+      case node_type_enum::LIST:
+        let_bindings = root_list_arg_1->as<ast_node_list> ();
+        break;
+      case node_type_enum::VECTOR:
+        let_bindings = root_list_arg_1->as<ast_node_vector> ();
+        break;
+      default:
+        raise<mal_exception_eval_invalid_arg> (root_list_arg_1->to_string ());
+      };
 
       //
-      auto fn_handle_def = [root_list, &a_env]()
+      auto let_env = environment::make (a_env);
+
+      if (let_bindings->size () % 2 != 0)
+        raise<mal_exception_eval_invalid_arg> (let_bindings->to_string ());
+      
+      for (size_t i = 0, e = let_bindings->size(); i < e; i += 2)
       {
-        if (root_list->size () != 3)
-          raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+        const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
+        ast_node::ptr value = EVAL ((*let_bindings)[i + 1], let_env);
 
-        const auto& key = (*root_list)[1]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
-
-        ast_node::ptr value = EVAL ((*root_list)[2], a_env);
-        a_env->set (key, value);
-        return value;
-      };
-
-      // 
-      auto fn_handle_let = [root_list, &a_env]()
-      {
-        if (root_list->size () != 3)
-          raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
-
-        const ast_node_container_base* let_bindings = nullptr;
-        const auto root_list_arg_1 = (*root_list)[1];
-        switch (root_list_arg_1->type ())
-        {
-        case node_type_enum::LIST:
-          let_bindings = root_list_arg_1->as<ast_node_list> ();
-          break;
-        case node_type_enum::VECTOR:
-          let_bindings = root_list_arg_1->as<ast_node_vector> ();
-          break;
-        default:
-          raise<mal_exception_eval_invalid_arg> (root_list_arg_1->to_string ());
-        };
-
-        //
-        auto let_env = environment::make (a_env);
-
-        if (let_bindings->size () % 2 != 0)
-          raise<mal_exception_eval_invalid_arg> (let_bindings->to_string ());
-        
-        for (size_t i = 0, e = let_bindings->size(); i < e; i += 2)
-        {
-          const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
-          ast_node::ptr value = EVAL ((*let_bindings)[i + 1], let_env);
-
-          let_env->set (key, value);
-        }
-
-        return EVAL ((*root_list)[2], let_env);
-      };
-
-
-      if (symbol == "def!")
-      {
-        return fn_handle_def ();
+        let_env->set (key, value);
       }
-      else if (symbol == "let*")
-      {
-        return fn_handle_let ();
-      }
+
+      return EVAL ((*root_list)[2], let_env);
+    };
+
+
+    if (symbol == "def!")
+    {
+      return fn_handle_def ();
+    }
+    else if (symbol == "let*")
+    {
+      return fn_handle_let ();
     }
   }
 
