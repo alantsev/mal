@@ -5,7 +5,7 @@
 /// ast_node_list class
 ///////////////////////////////
 std::string 
-ast_node_list::to_string () const // override
+ast_node_list::to_string (bool print_readable) const // override
 {
   std::string retVal = "(";
   for (size_t i = 0, e = m_children.size (); i < e; ++i)
@@ -24,7 +24,7 @@ ast_node_list::to_string () const // override
 /// ast_node_vector class
 ///////////////////////////////
 std::string 
-ast_node_vector::to_string () const // override
+ast_node_vector::to_string (bool print_readable) const // override
 {
   std::string retVal = "[";
   for (size_t i = 0, e = m_children.size (); i < e; ++i)
@@ -48,7 +48,7 @@ ast_node_atom_symbol::ast_node_atom_symbol (std::string a_symbol)
 
 ///////////////////////////////
 std::string
-ast_node_atom_symbol::to_string () const // override
+ast_node_atom_symbol::to_string (bool print_readable) const // override
 {
   // FIXME
   return m_symbol;
@@ -63,7 +63,7 @@ ast_node_atom_int::ast_node_atom_int (int a_value)
 
 ///////////////////////////////
 std::string
-ast_node_atom_int::to_string () const // override
+ast_node_atom_int::to_string (bool print_readable) const // override
 {
   // FIXME
   return std::to_string (m_value);
@@ -73,7 +73,7 @@ ast_node_atom_int::to_string () const // override
 /// ast_node_atom_nil class
 ///////////////////////////////
 std::string
-ast_node_atom_nil::to_string () const
+ast_node_atom_nil::to_string (bool print_readable) const
 {
 	return "nil";
 }

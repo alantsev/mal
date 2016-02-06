@@ -30,7 +30,7 @@ class ast_node_atom_symbol : public ast_node_atom <node_type_enum::SYMBOL>
 {
 public:
   ast_node_atom_symbol (std::string a_symbol);
-  std::string to_string () const override;
+  std::string to_string (bool print_readable) const override;
 
   const std::string& symbol () const
   {
@@ -54,11 +54,15 @@ public:
     : m_value (std::move (val))
   {}
 
-  std::string to_string () const override
+  std::string to_string (bool print_readable) const override
   {
+    if (!print_readable)
+      return m_value;
+
     std::string retVal = m_value;
     replace_all (retVal, "\\", "\\\\");
     replace_all (retVal, "\n", "\\n");
+    replace_all (retVal, "\"", "\\\"");
     return "\"" + retVal + "\"";
   }
 
@@ -93,7 +97,7 @@ class ast_node_atom_int : public ast_node_atom <node_type_enum::INT>
 public:
   ast_node_atom_int (int a_value);
 
-  std::string to_string () const override;
+  std::string to_string (bool print_readable) const override;
   int value () const
   {
     return m_value;
@@ -113,7 +117,7 @@ template <bool VALUE>
 class ast_node_atom_bool : public ast_node_atom <node_type_enum::BOOL>
 {
 public:
-  std::string to_string () const override
+  std::string to_string (bool print_readable) const override
   {
     return VALUE ? "true" : "false";
   }
@@ -139,7 +143,7 @@ class ast_node_atom_nil : public ast_node_atom <node_type_enum::NIL>
 {
 public:
   ast_node_atom_nil () = default;
-  std::string to_string () const override;
+  std::string to_string (bool print_readable) const override;
 
   bool operator == (const ast_node& rp) const override
   {
@@ -280,14 +284,15 @@ protected:
 class ast_node_list : public ast_node_container_crtp <node_type_enum::LIST, ast_node_list>
 {
 public:
-  std::string to_string () const override;
+  using ast_node::to_string;
+  std::string to_string (bool print_readable) const override;
 };
 
 ///////////////////////////////
 class ast_node_vector : public ast_node_container_crtp <node_type_enum::VECTOR, ast_node_vector>
 {
 public:
-  std::string to_string () const override;
+  std::string to_string (bool print_readably) const override;
 };
 
 ///////////////////////////////
@@ -310,7 +315,7 @@ public:
   using builtin_fn = ast_node::ptr (*) (const call_arguments&);
   ast_node_callable_builtin (const std::string &signature, builtin_fn fn);
 
-  std::string to_string () const override
+  std::string to_string (bool print_readable) const override
   {
     return m_signature ;
   }
@@ -339,7 +344,7 @@ public:
   using eval_fn = std::function<ast_node::ptr (ast_node::ptr, environment::ptr)>;
   ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, environment::const_ptr outer_env, eval_fn eval);
 
-  std::string to_string () const override
+  std::string to_string (bool print_readable) const override
   {
 //    return "#callable-lambda" ;
     return "#callable-lambda" + m_binds->to_string ()+ " -> " + m_ast->to_string ();

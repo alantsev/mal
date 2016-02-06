@@ -254,5 +254,5 @@ pr_str (ast tree, bool print_readably)
 {
   if (!tree)
     return {};
-  return tree->to_string ();
+  return tree->to_string (print_readably);
 }

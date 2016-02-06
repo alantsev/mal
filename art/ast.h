@@ -16,6 +16,7 @@ enum class node_type_enum
 {
   UNKNOWN = 0,
   SYMBOL,
+  KEYWORD,
   STRING,
   INT,
   BOOL,
@@ -40,7 +41,13 @@ public:
   //
   ast_node () = default;
   virtual ~ast_node () = default;
-  virtual std::string to_string () const = 0;
+
+  virtual std::string to_string () const
+  {
+    return to_string (true);
+  }
+
+  virtual std::string to_string (bool print_readable) const = 0;
   virtual node_type_enum type () const = 0;
 
   virtual bool operator == (const ast_node&) const = 0;
