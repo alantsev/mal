@@ -57,7 +57,7 @@ EVAL (ast &&a_ast)
 void
 PRINT (ast&& a_ast)
 {
-    printline (pr_str (std::move (a_ast)));
+    printline (pr_str (std::move (a_ast), true));
 }
 
 ///////////////////////////////

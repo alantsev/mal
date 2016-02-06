@@ -194,7 +194,7 @@ eval_ast (ast tree, environment::ptr a_env)
 void
 PRINT (ast tree)
 {
-  printline (pr_str (tree));
+  printline (pr_str (tree, true));
 }
 
 ///////////////////////////////

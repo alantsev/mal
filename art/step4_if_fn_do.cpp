@@ -49,7 +49,7 @@ READ (const std::string& prompt)
 
 ///////////////////////////////
 ast
-apply (const ast_node_list* callable_list)
+call_fn (const ast_node_list* callable_list)
 {
   const size_t list_size = callable_list->size ();
   if (list_size == 0)
@@ -65,18 +65,22 @@ ast
 eval_ast (ast tree, environment::ptr a_env); // fwd decl
 
 ///////////////////////////////
+// FIXME - make it loop over 
+//   - eval_ast
+//   - apply
+// 
 ast
 EVAL (ast tree, environment::ptr a_env)
 {
   if (tree->type () != node_type_enum::LIST)
     return eval_ast (tree, a_env);
 
-  // default apply
+  // default apply - call fn, first argument is callable
   auto fn_default_list_apply = [&] ()
   {
     ast_node::ptr new_node = eval_ast (tree, a_env);
     auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
-    return apply (new_node_list);
+    return call_fn (new_node_list);
   };
 
   // not as_or_throw - we know the type
@@ -219,12 +223,6 @@ EVAL (ast tree, environment::ptr a_env)
 ast
 eval_ast (ast tree, environment::ptr a_env)
 {
-  auto fn_handle_container = [&a_env](const ast_node_container_base* container)
-  {
-    // TODO - add here optimization to do not clone underlying node if the current pointer is unique!
-    return container->map ([&a_env] (ast_node::ptr v) { return EVAL (v, a_env);});
-  };
-
   switch (tree->type ())
   {
   case node_type_enum::SYMBOL:
@@ -238,7 +236,12 @@ eval_ast (ast tree, environment::ptr a_env)
   case node_type_enum::VECTOR:
     {
       // not as_or_throw - we know the type
-      return fn_handle_container (tree->as<ast_node_container_base> ());
+      const auto& node_container = tree->as<ast_node_container_base> ();
+      // TODO - add here optimization to do not clone underlying node if the current pointer is unique!
+      return node_container->map (
+        [&a_env] (ast_node::ptr v) { 
+          return EVAL (v, a_env);
+        });
     }
 
   default:
@@ -252,7 +255,7 @@ eval_ast (ast tree, environment::ptr a_env)
 void
 PRINT (ast tree)
 {
-  printline (pr_str (tree));
+  printline (pr_str (tree, true));
 }
 
 ///////////////////////////////

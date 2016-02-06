@@ -123,7 +123,7 @@ EVAL (ast tree, environment::const_ptr a_env)
 void
 PRINT (ast tree)
 {
-    printline (pr_str (tree));
+    printline (pr_str (tree, true));
 }
 
 ///////////////////////////////
