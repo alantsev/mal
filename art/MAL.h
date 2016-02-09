@@ -15,6 +15,7 @@ class ast_node_atom_int;
 class ast_node_container_base;
 class ast_node_list;
 class ast_node_vector;
+class ast_node_hashmap;
 
 class call_arguments;
 
