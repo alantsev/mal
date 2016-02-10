@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <iostream>
 #include <string>
+#include <tuple>
 
 ///////////////////////////////
 std::string 
@@ -49,19 +50,6 @@ READ (const std::string& prompt)
 
 ///////////////////////////////
 ast
-call_fn (const ast_node_list* callable_list)
-{
-  const size_t list_size = callable_list->size ();
-  if (list_size == 0)
-    raise<mal_exception_eval_not_callable> (callable_list->to_string ());
-
-  auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
-
-  return callable_node->call (call_arguments (callable_list, 1, list_size - 1));
-}
-
-///////////////////////////////
-ast
 eval_ast (ast tree, environment::ptr a_env); // fwd decl
 
 ///////////////////////////////
@@ -72,150 +60,181 @@ eval_ast (ast tree, environment::ptr a_env); // fwd decl
 ast
 EVAL (ast tree, environment::ptr a_env)
 {
-  if (tree->type () != node_type_enum::LIST)
-    return eval_ast (tree, a_env);
+  ///////////////////////////////
+  // tree, env, retVal
+  using tco = std::tuple <ast, environment::ptr, ast>;
 
-  // default apply - call fn, first argument is callable
-  auto fn_default_list_apply = [&] ()
+  for (;;)
   {
-    ast_node::ptr new_node = eval_ast (tree, a_env);
-    auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
-    return call_fn (new_node_list);
-  };
+    if (tree->type () != node_type_enum::LIST)
+      return eval_ast (tree, a_env);
 
-  // not as_or_throw - we know the type
-  auto root_list = tree->as<ast_node_list> ();
-  if (root_list->empty ())
-    return tree;
-
-  //
-  auto fn_handle_def = [root_list, &a_env]()
-  {
-    if (root_list->size () != 3)
-      raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
-
-    const auto& key = (*root_list)[1]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
-
-    ast_node::ptr value = EVAL ((*root_list)[2], a_env);
-    a_env->set (key, value);
-    return value;
-  };
-
-  // 
-  auto fn_handle_let = [root_list, &a_env]()
-  {
-    if (root_list->size () != 3)
-      raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
-
-    const ast_node_container_base* let_bindings = nullptr;
-    const auto root_list_arg_1 = (*root_list)[1];
-    switch (root_list_arg_1->type ())
-    {
-    case node_type_enum::LIST:
-    case node_type_enum::VECTOR:
-      let_bindings = root_list_arg_1->as<ast_node_container_base> ();
-      break;
-    default:
-      raise<mal_exception_eval_invalid_arg> (root_list_arg_1->to_string ());
-    };
+    // not as_or_throw - we know the type
+    auto root_list = tree->as<ast_node_list> ();
+    if (root_list->empty ())
+      return tree;
 
     //
-    auto let_env = environment::make (a_env);
-
-    if (let_bindings->size () % 2 != 0)
-      raise<mal_exception_eval_invalid_arg> (let_bindings->to_string ());
-    
-    for (size_t i = 0, e = let_bindings->size(); i < e; i += 2)
+    auto fn_handle_def = [root_list, &a_env]()
     {
-      const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
-      ast_node::ptr value = EVAL ((*let_bindings)[i + 1], let_env);
+      if (root_list->size () != 3)
+        raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
 
-      let_env->set (key, value);
-    }
+      const auto& key = (*root_list)[1]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
 
-    return EVAL ((*root_list)[2], let_env);
-  };
-
-  auto fn_handle_do = [root_list, &a_env]()
-  {
-    const size_t list_size = root_list->size ();
-    if (list_size < 2)
-      raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
-
-    for (size_t i = 1, e = list_size - 1; i < e; ++i)
-    {
-      /*retVal = */EVAL ((*root_list)[i], a_env);
-    }
-
-    return EVAL ((*root_list)[list_size - 1], a_env);
-  };
-
-  auto fn_handle_if = [root_list, &a_env] () -> ast
-  {
-    const size_t list_size = root_list->size ();
-    if (list_size < 3 || list_size > 4)
-      raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
-
-    ast_node::ptr condNode = EVAL ((*root_list)[1], a_env);
-    const bool cond = !(condNode == ast_node::nil_node) && !(condNode == ast_node::false_node);
-
-    if (cond)
-      return EVAL((*root_list)[2], a_env);
-    else if (list_size == 4)
-      return EVAL((*root_list)[3], a_env);
-
-    return ast_node::nil_node;
-  };
-
-  auto fn_handle_fn = [root_list, &a_env] () -> ast
-  {
-    const size_t list_size = root_list->size ();
-    if (list_size != 3)
-      raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
-
-    auto&& bindsNode = (*root_list)[1];
-    auto&& astNode = (*root_list)[2];
-
-    auto evalFn = [] (ast_node::ptr tree, environment::ptr env) -> ast_node::ptr
-    {
-      return EVAL (tree, env);
+      ast_node::ptr value = EVAL ((*root_list)[2], a_env);
+      a_env->set (key, value);
+      return value;
     };
 
-    ast_node::ptr retVal = std::make_shared<ast_node_callable_lambda> (bindsNode, astNode, a_env, evalFn);
-    return retVal;
-  };
+    // tco
+    auto fn_handle_let_tco = [root_list, &a_env]() -> tco
+    {
+      if (root_list->size () != 3)
+        raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
 
-  auto first = (*root_list)[0];
-  if (first->type () == node_type_enum::SYMBOL)
-  {
-    // apply special symbols
-    // not as_or_throw - we know the type
-    const auto first_symbol = first->as<ast_node_atom_symbol> ();
-    const auto& symbol = first_symbol->symbol ();
+      const ast_node_container_base* let_bindings = nullptr;
+      const auto root_list_arg_1 = (*root_list)[1];
+      switch (root_list_arg_1->type ())
+      {
+      case node_type_enum::LIST:
+      case node_type_enum::VECTOR:
+        let_bindings = root_list_arg_1->as<ast_node_container_base> ();
+        break;
+      default:
+        raise<mal_exception_eval_invalid_arg> (root_list_arg_1->to_string ());
+      };
 
-    if (symbol == "def!")
+      //
+      auto let_env = environment::make (a_env);
+
+      if (let_bindings->size () % 2 != 0)
+        raise<mal_exception_eval_invalid_arg> (let_bindings->to_string ());
+      
+      for (size_t i = 0, e = let_bindings->size(); i < e; i += 2)
+      {
+        const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
+        ast_node::ptr value = EVAL ((*let_bindings)[i + 1], let_env);
+
+        let_env->set (key, value);
+      }
+
+      return {(*root_list)[2], let_env};
+    };
+
+    // tco
+    auto fn_handle_apply_tco= [&tree, &a_env]() -> tco
     {
-      return fn_handle_def ();
-    }
-    else if (symbol == "let*")
+      ast_node::ptr new_node = eval_ast (tree, a_env);
+      auto callable_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+
+      const size_t list_size = callable_list->size ();
+      if (list_size == 0)
+        raise<mal_exception_eval_not_callable> (callable_list->to_string ());
+
+      auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
+
+      // FIXME - 
+      return tco {nullptr, nullptr, callable_node->call (call_arguments (callable_list, 1, list_size - 1))};
+    };
+
+    // tco
+    auto fn_handle_do_tco = [root_list, &a_env]() -> tco
     {
-      return fn_handle_let ();
-    }
-    else if (symbol == "do")
+      const size_t list_size = root_list->size ();
+      if (list_size < 2)
+        raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+      for (size_t i = 1, e = list_size - 1; i < e; ++i)
+      {
+        /*retVal = */EVAL ((*root_list)[i], a_env);
+      }
+
+      return {(*root_list)[list_size - 1], a_env};
+    };
+
+    // tco
+    auto fn_handle_if_tco = [root_list, &a_env] () -> tco
     {
-      return fn_handle_do ();
-    }
-    else if (symbol == "if")
+      const size_t list_size = root_list->size ();
+      if (list_size < 3 || list_size > 4)
+        raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+      ast_node::ptr condNode = EVAL ((*root_list)[1], a_env);
+      const bool cond = !(condNode == ast_node::nil_node) && !(condNode == ast_node::false_node);
+
+      if (cond)
+        return {(*root_list)[2], a_env};
+      else if (list_size == 4)
+        return {(*root_list)[3], a_env};
+
+      return tco {nullptr, nullptr, ast_node::nil_node};
+    };
+
+    auto fn_handle_fn = [root_list, &a_env] () -> ast
     {
-      return fn_handle_if ();
-    }
-    else if (symbol == "fn*")
+      const size_t list_size = root_list->size ();
+      if (list_size != 3)
+        raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+      auto&& bindsNode = (*root_list)[1];
+      auto&& astNode = (*root_list)[2];
+
+      auto evalFn = [] (ast_node::ptr tree, environment::ptr env) -> ast_node::ptr
+      {
+        return EVAL (tree, env);
+      };
+
+      ast_node::ptr retVal = std::make_shared<ast_node_callable_lambda> (bindsNode, astNode, a_env, evalFn);
+      return retVal;
+    };
+
+    auto first = (*root_list)[0];
+    if (first->type () == node_type_enum::SYMBOL)
     {
-      return fn_handle_fn ();
+      // apply special symbols
+      // not as_or_throw - we know the type
+      const auto first_symbol = first->as<ast_node_atom_symbol> ();
+      const auto& symbol = first_symbol->symbol ();
+
+      if (symbol == "def!")
+      {
+        return fn_handle_def ();
+      }
+      else if (symbol == "let*")
+      {
+        std::tie (tree, a_env, std::ignore) = fn_handle_let_tco ();
+        continue;
+      }
+      else if (symbol == "do")
+      {
+        std::tie (tree, a_env, std::ignore) = fn_handle_do_tco ();
+        continue;
+      }
+      else if (symbol == "if")
+      {
+        ast retVal;
+        std::tie (tree, a_env, retVal) = fn_handle_if_tco ();
+        if (retVal)
+          return retVal;
+        continue;
+      }
+      else if (symbol == "fn*")
+      {
+        return fn_handle_fn ();
+      }
     }
+
+    // apply
+    {
+      ast retVal;
+      std::tie (tree, a_env, retVal) = fn_handle_apply_tco ();
+      if (retVal)
+        return retVal;
+      continue;
+    }
+
   }
-
-  return fn_default_list_apply ();
 }
 
 
