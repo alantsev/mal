@@ -60,10 +60,6 @@ eval_ast (ast tree, environment::ptr a_env); // fwd decl
 ast
 EVAL (ast tree, environment::ptr a_env)
 {
-  ///////////////////////////////
-  // tree, env, retVal
-  using tco = std::tuple <ast, environment::ptr, ast>;
-
   for (;;)
   {
     if (tree->type () != node_type_enum::LIST)
@@ -134,8 +130,7 @@ EVAL (ast tree, environment::ptr a_env)
 
       auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
-      // FIXME - 
-      return tco {nullptr, nullptr, callable_node->call (call_arguments (callable_list, 1, list_size - 1))};
+      return callable_node->call_tco (call_arguments (callable_list, 1, list_size - 1));
     };
 
     // tco

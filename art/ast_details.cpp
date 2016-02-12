@@ -95,6 +95,13 @@ ast_node_callable_builtin::call (const call_arguments& args) const
 }
 
 ///////////////////////////////
+tco
+ast_node_callable_builtin::call_tco (const call_arguments& args) const
+{
+  return tco{nullptr, nullptr, m_fn (args)};
+}
+
+///////////////////////////////
 /// ast_node_callable_lambda class
 ///////////////////////////////
 ast_node_callable_lambda::ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, environment::const_ptr outer_env, eval_fn eval)
@@ -117,6 +124,14 @@ ast_node_callable_lambda::call (const call_arguments& args) const
 {
   auto env = environment::make (*m_binds_as_container, args, m_outer_env);
   return m_eval (m_ast, env);
+}
+
+///////////////////////////////
+tco
+ast_node_callable_lambda::call_tco (const call_arguments& args) const
+{
+  auto env = environment::make (*m_binds_as_container, args, m_outer_env);
+  return tco{m_ast, env, nullptr};
 }
 
 ///////////////////////////////

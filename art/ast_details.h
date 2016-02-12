@@ -296,11 +296,16 @@ public:
 };
 
 ///////////////////////////////
+// tree, env, retVal
+using tco = std::tuple <ast, environment::ptr, ast>;
+
+///////////////////////////////
 class ast_node_callable : public ast_node
 {
 public:
   // FIXME - split it
   virtual ast_node::ptr call (const call_arguments&) const = 0;
+  virtual tco call_tco (const call_arguments&) const = 0;
 
   static constexpr bool IS_VALID_TYPE (node_type_enum t)
   {
@@ -321,6 +326,8 @@ public:
   }
 
   ast_node::ptr call (const call_arguments& args) const override;
+  tco call_tco (const call_arguments&) const override;
+
 
   bool operator == (const ast_node& rp) const override
   {
@@ -351,6 +358,7 @@ public:
   }
 
   ast_node::ptr call (const call_arguments& args) const override;
+  tco call_tco (const call_arguments&) const override;
 
   bool operator == (const ast_node& rp) const override
   {
