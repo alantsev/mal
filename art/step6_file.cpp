@@ -304,6 +304,8 @@ main(int, char**)
     };
     env->set ("eval", std::make_unique<ast_node_callable_builtin<decltype(evalFn)>> ("eval", evalFn));
 
+    // load file
+    EVAL (read_str ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
 
     // repl
     for (;;)
