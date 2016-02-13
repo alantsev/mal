@@ -289,14 +289,21 @@ main(int, char**)
     const std::string prompt = "user> ";
 
     auto env = environment::make ();
-    core ns;
+    core ns (env);
 
-    for (auto&& c : ns.content ())
-    {
-      env->set (c.first, c.second);
-    }
     // define not function
     EVAL (read_str ("(def! not (fn* (a) (if a false true)))"), env);
+
+    // eval
+    auto evalFn = [env] (const call_arguments& args) -> ast_node::ptr
+    {
+      const auto args_size = args.size ();
+      if (args_size !=  1)
+        raise<mal_exception_eval_invalid_arg> ();
+      return EVAL (args[0], env);
+    };
+    env->set ("eval", std::make_unique<ast_node_callable_builtin<decltype(evalFn)>> ("eval", evalFn));
+
 
     // repl
     for (;;)

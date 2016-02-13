@@ -131,18 +131,7 @@ void
 rep ()
 {
     static auto repl_env = environment::make ();
-    static class env_init {
-    public:
-        env_init ()
-        {
-            core ns;
-
-            for (auto&& c : ns.content ())
-            {
-              repl_env->set (c.first, c.second);
-            }
-        }
-    } _;
+    static core ns (repl_env);
 
     PRINT (EVAL ( READ (), repl_env));
 }

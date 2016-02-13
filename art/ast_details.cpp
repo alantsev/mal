@@ -79,22 +79,6 @@ ast_node_atom_nil::to_string (bool print_readable) const
 }
 
 ///////////////////////////////
-/// ast_node_callable_builtin class
-///////////////////////////////
-ast_node_callable_builtin::ast_node_callable_builtin (const std::string& signature, ast_node_callable_builtin::builtin_fn fn)
-  : m_fn (fn)
-{
-  m_signature = std::string ("#builtin-fn(") + (std::move (signature)) + ")";
-}
-
-///////////////////////////////
-tco
-ast_node_callable_builtin::call_tco (const call_arguments& args) const
-{
-  return tco{nullptr, nullptr, m_fn (args)};
-}
-
-///////////////////////////////
 /// ast_node_callable_lambda class
 ///////////////////////////////
 ast_node_callable_lambda::ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, environment::const_ptr outer_env)

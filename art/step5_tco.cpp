@@ -283,12 +283,8 @@ main(int, char**)
     const std::string prompt = "user> ";
 
     auto env = environment::make ();
-    core ns;
+    core ns (env);
 
-    for (auto&& c : ns.content ())
-    {
-      env->set (c.first, c.second);
-    }
     // define not function
     EVAL (read_str ("(def! not (fn* (a) (if a false true)))"), env);
 

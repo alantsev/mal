@@ -311,24 +311,49 @@ public:
   }
 };
 
+
 ///////////////////////////////
-class ast_node_callable_builtin : public ast_node_callable
+class ast_node_callable_builtin_base : public ast_node_callable
 {
 public:
-  using builtin_fn = ast_node::ptr (*) (const call_arguments&);
-  ast_node_callable_builtin (const std::string &signature, builtin_fn fn);
+  bool operator == (const ast_node& rp) const override
+  {
+    return signature () == rp.as<ast_node_callable_builtin_base> ()->signature ();
+  }
+
+protected:
+  ast_node_callable_builtin_base (std::string signature)
+    : m_signature (std::move (signature))
+  {}
+
+  const std::string& signature () const
+  {
+    return m_signature;
+  }
+
+private:
+  std::string m_signature;
+};
+
+///////////////////////////////
+//   using builtin_fn = ast_node::ptr (*) (const call_arguments&);
+template <typename builtin_fn>
+class ast_node_callable_builtin : public ast_node_callable_builtin_base
+{
+public:
+  ast_node_callable_builtin (std::string signature, builtin_fn fn)
+    : ast_node_callable_builtin_base (std::move (signature))
+    , m_fn (fn)
+  {}
 
   std::string to_string (bool print_readable) const override
   {
-    return m_signature ;
+    return std::string ("#builtin-fn(") + signature () + ")";
   }
 
-  tco call_tco (const call_arguments&) const override;
-
-
-  bool operator == (const ast_node& rp) const override
+  tco call_tco (const call_arguments &args) const override
   {
-    return m_fn == rp.as<ast_node_callable_builtin> ()->m_fn;
+    return tco{nullptr, nullptr, m_fn (args)};
   }
 
   node_type_enum type () const override
@@ -337,7 +362,6 @@ public:
   }
 
 private:
-  std::string m_signature;
   builtin_fn m_fn;
 };
 

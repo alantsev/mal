@@ -279,7 +279,7 @@ builtin_slurp (const call_arguments& args)
 } // end of anonymous namespace
 
 ///////////////////////////////
-core::core ()
+core::core (environment::ptr root_env)
 {
   env_add_builtin ("+", builtin_plus);
   env_add_builtin ("-", builtin_minus);
@@ -304,12 +304,10 @@ core::core ()
 
   env_add_builtin ("read-string", builtin_read_string);
   env_add_builtin ("slurp", builtin_slurp);
-}
 
-///////////////////////////////
-void
-core:: env_add_builtin (const std::string& symbol, ast_node_callable_builtin::builtin_fn fn)
-{
-  m_content[symbol] = std::make_unique<ast_node_callable_builtin> (symbol, fn);
+  for (auto&& c : content ())
+  {
+    root_env->set (c.first, c.second);
+  }
 }
 

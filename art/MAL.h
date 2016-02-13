@@ -20,5 +20,7 @@ class ast_node_hashmap;
 class call_arguments;
 
 class ast_node_callable;
+
+template <typename builtin_fn>
 class ast_node_callable_builtin;
 class ast_node_callable_lambda;

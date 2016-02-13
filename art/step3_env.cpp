@@ -215,12 +215,7 @@ main(int, char**)
     const std::string prompt = "user> ";
 
     auto env = environment::make ();
-    core ns;
-
-    for (auto&& c : ns.content ())
-    {
-      env->set (c.first, c.second);
-    }
+    core ns (env);
 
     for (;;)
     {
