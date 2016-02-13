@@ -88,13 +88,6 @@ ast_node_callable_builtin::ast_node_callable_builtin (const std::string& signatu
 }
 
 ///////////////////////////////
-ast_node::ptr 
-ast_node_callable_builtin::call (const call_arguments& args) const
-{
-  return m_fn (args);
-}
-
-///////////////////////////////
 tco
 ast_node_callable_builtin::call_tco (const call_arguments& args) const
 {
@@ -104,26 +97,16 @@ ast_node_callable_builtin::call_tco (const call_arguments& args) const
 ///////////////////////////////
 /// ast_node_callable_lambda class
 ///////////////////////////////
-ast_node_callable_lambda::ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, environment::const_ptr outer_env, eval_fn eval)
+ast_node_callable_lambda::ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, environment::const_ptr outer_env)
   : m_binds (binds)
   , m_ast (ast)
   , m_outer_env (outer_env)
-  , m_eval (eval)
 {
   const auto bind_type = m_binds->type ();
   if (bind_type != node_type_enum::LIST && bind_type != node_type_enum::VECTOR)
     raise<mal_exception_eval_not_list> (m_binds->to_string ());
 
   m_binds_as_container = static_cast<const ast_node_container_base*> (m_binds.get ());
-}
-
-
-///////////////////////////////
-ast_node::ptr 
-ast_node_callable_lambda::call (const call_arguments& args) const
-{
-  auto env = environment::make (*m_binds_as_container, args, m_outer_env);
-  return m_eval (m_ast, env);
 }
 
 ///////////////////////////////

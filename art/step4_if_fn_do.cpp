@@ -42,6 +42,10 @@ printline (const std::string& line)
 
 ///////////////////////////////
 ast
+EVAL (ast tree, environment::ptr a_env);
+
+///////////////////////////////
+ast
 READ (const std::string& prompt)
 {
   return read_str ( readline (prompt));
@@ -57,7 +61,13 @@ call_fn (const ast_node_list* callable_list)
 
   auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
-  return callable_node->call (call_arguments (callable_list, 1, list_size - 1));
+  auto call_arg = callable_node->call_tco (call_arguments (callable_list, 1, list_size - 1));
+  auto retVal = std::get<2> (call_arg);
+
+  if (retVal)
+    return retVal;
+
+  return EVAL (std::get<0> (call_arg), std::get<1> (call_arg));
 }
 
 ///////////////////////////////
@@ -176,12 +186,7 @@ EVAL (ast tree, environment::ptr a_env)
     auto&& bindsNode = (*root_list)[1];
     auto&& astNode = (*root_list)[2];
 
-    auto evalFn = [] (ast_node::ptr tree, environment::ptr env) -> ast_node::ptr
-    {
-      return EVAL (tree, env);
-    };
-
-    ast_node::ptr retVal = std::make_shared<ast_node_callable_lambda> (bindsNode, astNode, a_env, evalFn);
+    ast_node::ptr retVal = std::make_shared<ast_node_callable_lambda> (bindsNode, astNode, a_env);
     return retVal;
   };
 

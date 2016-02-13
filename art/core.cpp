@@ -1,4 +1,7 @@
 #include "core.h"
+#include "reader.h"
+
+#include <fstream>
 
 namespace
 {
@@ -238,6 +241,41 @@ builtin_println (const call_arguments& args)
   return ast_node::nil_node;
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_read_string (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto strVal = args[0]->as_or_throw<ast_node_atom_string, mal_exception_eval_not_string> ();
+  return read_str (strVal->value ());
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_slurp (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto strVal = args[0]->as_or_throw<ast_node_atom_string, mal_exception_eval_not_string> ();
+  std::ifstream infile(strVal->value ());
+  if (!infile)
+    raise<mal_exception_eval_invalid_arg> ("file not found");
+
+  std::string allText;
+  std::string line;
+  while (std::getline(infile, line))
+  {
+    allText += line;
+  }
+
+  return std::make_shared<ast_node_atom_string> (std::move (allText));
+}
+
 } // end of anonymous namespace
 
 ///////////////////////////////
@@ -263,6 +301,9 @@ core::core ()
   env_add_builtin ("str", builtin_str);
   env_add_builtin ("prn", builtin_prn);
   env_add_builtin ("println", builtin_println);
+
+  env_add_builtin ("read-string", builtin_read_string);
+  env_add_builtin ("slurp", builtin_slurp);
 }
 
 ///////////////////////////////

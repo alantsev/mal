@@ -303,8 +303,6 @@ using tco = std::tuple <ast, environment::ptr, ast>;
 class ast_node_callable : public ast_node
 {
 public:
-  // FIXME - split it
-  virtual ast_node::ptr call (const call_arguments&) const = 0;
   virtual tco call_tco (const call_arguments&) const = 0;
 
   static constexpr bool IS_VALID_TYPE (node_type_enum t)
@@ -325,7 +323,6 @@ public:
     return m_signature ;
   }
 
-  ast_node::ptr call (const call_arguments& args) const override;
   tco call_tco (const call_arguments&) const override;
 
 
@@ -348,8 +345,7 @@ private:
 class ast_node_callable_lambda : public ast_node_callable
 {
 public:
-  using eval_fn = std::function<ast_node::ptr (ast_node::ptr, environment::ptr)>;
-  ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, environment::const_ptr outer_env, eval_fn eval);
+  ast_node_callable_lambda (ast_node::ptr binds, ast_node::ptr ast, environment::const_ptr outer_env);
 
   std::string to_string (bool print_readable) const override
   {
@@ -357,7 +353,6 @@ public:
     return "#callable-lambda" + m_binds->to_string ()+ " -> " + m_ast->to_string ();
   }
 
-  ast_node::ptr call (const call_arguments& args) const override;
   tco call_tco (const call_arguments&) const override;
 
   bool operator == (const ast_node& rp) const override
@@ -377,7 +372,6 @@ private:
 
   ast_node::ptr m_ast;
   environment::const_ptr m_outer_env;
-  eval_fn m_eval;
 };
 
 ///////////////////////////////

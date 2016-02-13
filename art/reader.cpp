@@ -17,8 +17,8 @@ namespace
 class reader 
 {
 public:
-  reader (std::string line)
-    : m_line (std::move (line))
+  reader (const std::string &line)
+    : m_line (line)
   {
     for (auto ch : m_line)
     {
@@ -244,7 +244,7 @@ reader::m_state_op [static_cast<int> (state_enum::COUNT)][static_cast<int> (oper
 
 
 ast 
-read_str (std::string line)
+read_str (const std::string &line)
 {
   return reader {line}.build ();
 }

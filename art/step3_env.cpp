@@ -57,7 +57,7 @@ apply (const ast_node_list* callable_list)
 
   auto && callable_node = (*callable_list)[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
-  return callable_node->call (call_arguments (callable_list, 1, list_size - 1));
+  return std::get<2> (callable_node->call_tco (call_arguments (callable_list, 1, list_size - 1)));
 }
 
 ///////////////////////////////

@@ -62,6 +62,9 @@ EVAL (ast tree, environment::ptr a_env)
 {
   for (;;)
   {
+    if (!tree)
+      return tree;
+
     if (tree->type () != node_type_enum::LIST)
       return eval_ast (tree, a_env);
 
@@ -264,6 +267,9 @@ eval_ast (ast tree, environment::ptr a_env)
 void
 PRINT (ast tree)
 {
+  if (!tree)
+    return;
+
   printline (pr_str (tree, true));
 }
 
