@@ -39,6 +39,9 @@ public:
 
   bool operator == (const ast_node& rp) const override
   {
+    if (!IS_VALID_TYPE (rp.type ()))
+      return false;
+
     return m_symbol == rp.as<ast_node_atom_symbol> ()->m_symbol;
   }
 
@@ -73,6 +76,9 @@ public:
 
   bool operator == (const ast_node& rp) const override
   {
+    if (!IS_VALID_TYPE (rp.type ()))
+      return false;
+
     return m_value == rp.as<ast_node_atom_string> ()->m_value;
   }
 
@@ -105,6 +111,9 @@ public:
 
   bool operator == (const ast_node& rp) const override
   {
+    if (!IS_VALID_TYPE (rp.type ()))
+      return false;
+
     return m_value == rp.as<ast_node_atom_int> ()->m_value;
   }
 
@@ -133,6 +142,9 @@ public:
 
   bool operator == (const ast_node& rp) const override
   {
+    if (!IS_VALID_TYPE (rp.type ()))
+      return false;
+
     return this == &rp;
   }
 
@@ -147,6 +159,9 @@ public:
 
   bool operator == (const ast_node& rp) const override
   {
+    if (!IS_VALID_TYPE (rp.type ()))
+      return false;
+
     return this == &rp;
   }
 };
@@ -194,7 +209,8 @@ public:
 
   bool operator == (const ast_node& rp) const override
   {
-    assert (type () == rp.type ());
+    if (!IS_VALID_TYPE (rp.type ()))
+      return false;
 
     auto rp_container = rp.as<ast_node_container_base> ();
     if (size () != rp_container->size())
@@ -262,11 +278,6 @@ public:
     return NODE_TYPE;
   }
 
-  static constexpr bool IS_VALID_TYPE (node_type_enum t)
-  {
-    return NODE_TYPE == t;
-  }
-
 protected:
   mutable_ptr clone () const override
   {
@@ -318,6 +329,9 @@ class ast_node_callable_builtin_base : public ast_node_callable
 public:
   bool operator == (const ast_node& rp) const override
   {
+    if (type() != rp.type ())
+      return false;
+
     return signature () == rp.as<ast_node_callable_builtin_base> ()->signature ();
   }
 
@@ -381,6 +395,9 @@ public:
 
   bool operator == (const ast_node& rp) const override
   {
+    if (type () != rp.type ())
+      return false;
+
     auto rp_lambda = rp.as<ast_node_callable_lambda> ();
     return equals (*m_binds, *rp_lambda->m_binds) && equals (*m_ast, *rp_lambda->m_ast);
   }

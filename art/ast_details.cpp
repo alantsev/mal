@@ -13,7 +13,7 @@ ast_node_list::to_string (bool print_readable) const // override
     auto &&p = m_children [i];
     if (i != 0)
       retVal += " ";
-    retVal += p->to_string ();
+    retVal += p->to_string (print_readable);
   }
   retVal += ")";
 
@@ -32,7 +32,7 @@ ast_node_vector::to_string (bool print_readable) const // override
     auto &&p = m_children [i];
     if (i != 0)
       retVal += " ";
-    retVal += p->to_string ();
+    retVal += p->to_string (print_readable);
   }
   retVal += "]";
 

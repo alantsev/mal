@@ -25,6 +25,9 @@ public:
       ++m_current_position;
       call_op (ch);
     }
+    if (m_currrent_state == state_enum::COMMENT_STATE)
+      return;
+
     if (m_currrent_state != state_enum::NORMAL_STATE)
       raise<mal_exception_parse_error> ("expected \" , got EOF");
 
@@ -130,7 +133,13 @@ private:
         m_last_delim_position = m_current_position;
         break;
       }
-
+      case ';':
+      {
+        process_token (m_last_delim_position, m_current_position);
+        m_currrent_state = state_enum::COMMENT_STATE;
+        m_last_delim_position = m_current_position;
+        break;
+      }
       default:
       {
         if (std::isspace (ch) || ch == ',')
@@ -178,12 +187,25 @@ private:
       }
       default:
       {
-        m_builder.append_string ({ch, 0});
+        m_builder.append_string ({ch});
         break;
       }
     };
     m_last_delim_position = m_current_position;
     m_currrent_state = state_enum::STRING_STATE;
+  }
+
+  void comment_parse_fn (char ch)
+  {
+    switch (ch)
+    {
+      case '\n':
+      {
+        m_currrent_state = state_enum::NORMAL_STATE;
+        m_last_delim_position = m_current_position;
+        break;
+      }
+    };
   }
 
   //
@@ -194,6 +216,7 @@ private:
     NORMAL_STATE = 0,
     STRING_STATE,
     ESCAPED_STRING_STATE,
+    COMMENT_STATE,
     COUNT
   };
 
@@ -235,8 +258,13 @@ reader::m_state_op [static_cast<int> (state_enum::COUNT)][static_cast<int> (oper
   {
     // NORMAL_OPERATION
     &reader::escaped_string_parse_fn
-  }
+  },
 
+  // COMMENT_STATE
+  {
+    // NORMAL_OPERATION
+    &reader::comment_parse_fn
+  }
 };
 
 

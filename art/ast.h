@@ -105,8 +105,6 @@ private:
 ///////////////////////////////
 inline bool equals (const ast_node& left, const ast_node& right)
 {
-  if (left.type () != right.type ())
-    return false;
   return left == right;
 }
 

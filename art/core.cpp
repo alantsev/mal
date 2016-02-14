@@ -1,7 +1,9 @@
 #include "core.h"
 #include "reader.h"
 
+#include <string>
 #include <fstream>
+#include <streambuf>
 
 namespace
 {
@@ -130,8 +132,15 @@ builtin_count (const call_arguments& args)
   if (args_size !=  1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  auto arg_list = args[0]->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
-  return std::make_shared<ast_node_atom_int> (arg_list->size ());
+  int count = 0;
+  if (args[0]->type () != node_type_enum::NIL)
+  {
+    auto arg_list = args[0]->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
+    count = arg_list->size ();
+  }
+
+  return std::make_shared<ast_node_atom_int> (count);
+
 }
 
 ///////////////////////////////
@@ -267,11 +276,13 @@ builtin_slurp (const call_arguments& args)
     raise<mal_exception_eval_invalid_arg> ("file not found");
 
   std::string allText;
-  std::string line;
-  while (std::getline(infile, line))
-  {
-    allText += line;
-  }
+
+  infile.seekg(0, std::ios::end);   
+  allText.reserve(infile.tellg());
+  infile.seekg(0, std::ios::beg);
+
+  allText.assign((std::istreambuf_iterator<char>(infile)),
+                  std::istreambuf_iterator<char>());
 
   return std::make_shared<ast_node_atom_string> (std::move (allText));
 }
