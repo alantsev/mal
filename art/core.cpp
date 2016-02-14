@@ -19,7 +19,7 @@ ast_node_from_bool (bool f)
 inline int
 arg_to_int (const call_arguments& args, size_t i)
 {
-  return args[i]->as_or_throw<ast_node_atom_int, mal_exception_eval_not_int> ()->value ();
+  return args[i]->as_or_throw<ast_node_int, mal_exception_eval_not_int> ()->value ();
 }
 
 ///////////////////////////////
@@ -46,7 +46,7 @@ builtin_plus (const call_arguments& args)
   for (size_t i = 0; i < args_size; ++i)
     retVal += arg_to_int(args, i);
 
-  return std::make_shared<ast_node_atom_int> (retVal);
+  return std::make_shared<ast_node_int> (retVal);
 }
 
 ///////////////////////////////
@@ -58,7 +58,7 @@ builtin_minus (const call_arguments& args)
     raise<mal_exception_eval_invalid_arg> ();
 
   int retVal = (args_size == 1) ? -arg_to_int (args, 0) : arg_to_int (args, 0) - arg_to_int (args, 1);
-  return std::make_shared<ast_node_atom_int> (retVal);
+  return std::make_shared<ast_node_int> (retVal);
 }
 
 ///////////////////////////////
@@ -70,7 +70,7 @@ builtin_div (const call_arguments& args)
     raise<mal_exception_eval_invalid_arg> ();
 
   int retVal = arg_to_int(args, 0) / arg_to_int(args, 1);
-  return std::make_shared<ast_node_atom_int> (retVal);
+  return std::make_shared<ast_node_int> (retVal);
 }
 
 ///////////////////////////////
@@ -85,7 +85,7 @@ builtin_mul (const call_arguments& args)
   for (size_t i = 0; i < args_size; ++i)
     retVal *= arg_to_int(args, i);
 
-  return std::make_shared<ast_node_atom_int> (retVal);
+  return std::make_shared<ast_node_int> (retVal);
 }
 
 ///////////////////////////////
@@ -139,7 +139,7 @@ builtin_count (const call_arguments& args)
     count = arg_list->size ();
   }
 
-  return std::make_shared<ast_node_atom_int> (count);
+  return std::make_shared<ast_node_int> (count);
 
 }
 
@@ -196,7 +196,7 @@ builtin_pr_str (const call_arguments& args)
     retVal += args[i]->to_string (true);
   }
 
-  return std::make_shared<ast_node_atom_string> (std::move (retVal));
+  return std::make_shared<ast_node_string> (std::move (retVal));
 }
 
 ///////////////////////////////
@@ -211,7 +211,7 @@ builtin_str (const call_arguments& args)
     retVal += args[i]->to_string (false);
   }
 
-  return std::make_shared<ast_node_atom_string> (std::move (retVal));
+  return std::make_shared<ast_node_string> (std::move (retVal));
 }
 
 ///////////////////////////////
@@ -258,7 +258,7 @@ builtin_read_string (const call_arguments& args)
   if (args_size !=  1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  auto strVal = args[0]->as_or_throw<ast_node_atom_string, mal_exception_eval_not_string> ();
+  auto strVal = args[0]->as_or_throw<ast_node_string, mal_exception_eval_not_string> ();
   return read_str (strVal->value ());
 }
 
@@ -270,7 +270,7 @@ builtin_slurp (const call_arguments& args)
   if (args_size !=  1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  auto strVal = args[0]->as_or_throw<ast_node_atom_string, mal_exception_eval_not_string> ();
+  auto strVal = args[0]->as_or_throw<ast_node_string, mal_exception_eval_not_string> ();
   std::ifstream infile(strVal->value ());
   if (!infile)
     raise<mal_exception_eval_invalid_arg> ("file not found");
@@ -284,7 +284,7 @@ builtin_slurp (const call_arguments& args)
   allText.assign((std::istreambuf_iterator<char>(infile)),
                   std::istreambuf_iterator<char>());
 
-  return std::make_shared<ast_node_atom_string> (std::move (allText));
+  return std::make_shared<ast_node_string> (std::move (allText));
 }
 
 } // end of anonymous namespace

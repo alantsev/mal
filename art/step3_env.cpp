@@ -84,7 +84,7 @@ EVAL (ast tree, environment::ptr a_env)
   if (first->type () == node_type_enum::SYMBOL)
   {
     // not as_or_throw - we know the type
-    const auto first_symbol = first->as<ast_node_atom_symbol> ();
+    const auto first_symbol = first->as<ast_node_symbol> ();
     const auto& symbol = first_symbol->symbol ();
 
     //
@@ -93,7 +93,7 @@ EVAL (ast tree, environment::ptr a_env)
       if (root_list->size () != 3)
         raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
 
-      const auto& key = (*root_list)[1]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
+      const auto& key = (*root_list)[1]->as_or_throw<ast_node_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
 
       ast_node::ptr value = EVAL ((*root_list)[2], a_env);
       a_env->set (key, value);
@@ -128,7 +128,7 @@ EVAL (ast tree, environment::ptr a_env)
       
       for (size_t i = 0, e = let_bindings->size(); i < e; i += 2)
       {
-        const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_atom_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
+        const auto& key = (*let_bindings)[i]->as_or_throw<ast_node_symbol, mal_exception_eval_invalid_arg> ()->symbol ();
         ast_node::ptr value = EVAL ((*let_bindings)[i + 1], let_env);
 
         let_env->set (key, value);
@@ -170,7 +170,7 @@ eval_ast (ast tree, environment::ptr a_env)
   case node_type_enum::SYMBOL:
     {
       // not as_or_throw - we know the type
-      const auto& node_symbol = tree->as<ast_node_atom_symbol> ();
+      const auto& node_symbol = tree->as<ast_node_symbol> ();
       return a_env->get_or_throw (node_symbol->symbol ());
 
     }

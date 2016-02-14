@@ -89,7 +89,7 @@ eval_ast (ast node, environment::const_ptr a_env)
     case node_type_enum::SYMBOL:
         {
             // as_or_throw ?
-            const auto& node_symbol = node->as<ast_node_atom_symbol> ();
+            const auto& node_symbol = node->as<ast_node_symbol> ();
             return a_env->get_or_throw (node_symbol->symbol ());
         }
     case node_type_enum::LIST:

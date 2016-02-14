@@ -15,6 +15,7 @@
 enum class node_type_enum
 {
   UNKNOWN = 0,
+  ATOM,
   SYMBOL,
   KEYWORD,
   STRING,

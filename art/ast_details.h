@@ -22,14 +22,14 @@ public:
 
 ///////////////////////////////
 template <node_type_enum NODE_TYPE>
-class ast_node_atom : public ast_node_base<NODE_TYPE>
+class ast_node_atom : public ast_node_base<node_type_enum::ATOM>
 {};
 
 ///////////////////////////////
-class ast_node_atom_symbol : public ast_node_atom <node_type_enum::SYMBOL>
+class ast_node_symbol : public ast_node_base <node_type_enum::SYMBOL>
 {
 public:
-  ast_node_atom_symbol (std::string a_symbol);
+  ast_node_symbol (std::string a_symbol);
   std::string to_string (bool print_readable) const override;
 
   const std::string& symbol () const
@@ -42,7 +42,7 @@ public:
     if (!IS_VALID_TYPE (rp.type ()))
       return false;
 
-    return m_symbol == rp.as<ast_node_atom_symbol> ()->m_symbol;
+    return m_symbol == rp.as<ast_node_symbol> ()->m_symbol;
   }
 
 private:
@@ -50,10 +50,10 @@ private:
 };
 
 ///////////////////////////////
-class ast_node_atom_string : public ast_node_atom <node_type_enum::STRING>
+class ast_node_string : public ast_node_base <node_type_enum::STRING>
 {
 public:
-  ast_node_atom_string (std::string val)
+  ast_node_string (std::string val)
     : m_value (std::move (val))
   {}
 
@@ -79,7 +79,7 @@ public:
     if (!IS_VALID_TYPE (rp.type ()))
       return false;
 
-    return m_value == rp.as<ast_node_atom_string> ()->m_value;
+    return m_value == rp.as<ast_node_string> ()->m_value;
   }
 
 private:
@@ -98,10 +98,10 @@ private:
 };
 
 ///////////////////////////////
-class ast_node_atom_int : public ast_node_atom <node_type_enum::INT>
+class ast_node_int : public ast_node_base <node_type_enum::INT>
 {
 public:
-  ast_node_atom_int (int a_value);
+  ast_node_int (int a_value);
 
   std::string to_string (bool print_readable) const override;
   int value () const
@@ -114,7 +114,7 @@ public:
     if (!IS_VALID_TYPE (rp.type ()))
       return false;
 
-    return m_value == rp.as<ast_node_atom_int> ()->m_value;
+    return m_value == rp.as<ast_node_int> ()->m_value;
   }
 
 private:
@@ -123,7 +123,7 @@ private:
 
 ///////////////////////////////
 template <bool VALUE>
-class ast_node_atom_bool : public ast_node_atom <node_type_enum::BOOL>
+class ast_node_bool : public ast_node_base <node_type_enum::BOOL>
 {
 public:
   std::string to_string (bool print_readable) const override
@@ -151,10 +151,10 @@ public:
 };
 
 ///////////////////////////////
-class ast_node_atom_nil : public ast_node_atom <node_type_enum::NIL>
+class ast_node_nil : public ast_node_base <node_type_enum::NIL>
 {
 public:
-  ast_node_atom_nil () = default;
+  ast_node_nil () = default;
   std::string to_string (bool print_readable) const override;
 
   bool operator == (const ast_node& rp) const override

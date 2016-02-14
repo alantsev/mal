@@ -22,7 +22,7 @@ environment::environment (hide_me, const ast_node_container_base& binds, const c
     if (bind_index + 1 != binds.size ())
       raise<mal_exception_eval_invalid_arg> ();
 
-    auto symbol = binds[bind_index]->template as_or_throw<ast_node_atom_symbol, mal_exception_eval_not_symbol> ()->symbol ();
+    auto symbol = binds[bind_index]->template as_or_throw<ast_node_symbol, mal_exception_eval_not_symbol> ()->symbol ();
     if (symbol == "&")
       raise<mal_exception_eval_invalid_arg> ();
 
@@ -38,7 +38,7 @@ environment::environment (hide_me, const ast_node_container_base& binds, const c
   //
   for (size_t i = 0, e = binds.size (); i < e; ++i)
   {
-    auto symbol = binds[i]->template as_or_throw<ast_node_atom_symbol, mal_exception_eval_not_symbol> ()->symbol ();
+    auto symbol = binds[i]->template as_or_throw<ast_node_symbol, mal_exception_eval_not_symbol> ()->symbol ();
 
     if (symbol == "&")
     {

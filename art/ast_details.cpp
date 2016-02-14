@@ -40,40 +40,40 @@ ast_node_vector::to_string (bool print_readable) const // override
 }
 
 ///////////////////////////////
-/// ast_node_atom_symbol class
+/// ast_node_symbol class
 ///////////////////////////////
-ast_node_atom_symbol::ast_node_atom_symbol (std::string a_symbol)
+ast_node_symbol::ast_node_symbol (std::string a_symbol)
   : m_symbol (std::move (a_symbol))
 {}
 
 ///////////////////////////////
 std::string
-ast_node_atom_symbol::to_string (bool print_readable) const // override
+ast_node_symbol::to_string (bool print_readable) const // override
 {
   // FIXME
   return m_symbol;
 }
 
 ///////////////////////////////
-/// ast_node_atom_int class
+/// ast_node_int class
 ///////////////////////////////
-ast_node_atom_int::ast_node_atom_int (int a_value)
+ast_node_int::ast_node_int (int a_value)
   : m_value (a_value)
 {}
 
 ///////////////////////////////
 std::string
-ast_node_atom_int::to_string (bool print_readable) const // override
+ast_node_int::to_string (bool print_readable) const // override
 {
   // FIXME
   return std::to_string (m_value);
 }
 
 ///////////////////////////////
-/// ast_node_atom_nil class
+/// ast_node_nil class
 ///////////////////////////////
 std::string
-ast_node_atom_nil::to_string (bool print_readable) const
+ast_node_nil::to_string (bool print_readable) const
 {
 	return "nil";
 }
@@ -161,7 +161,7 @@ ast_builder::close_vector ()
 ast_builder& 
 ast_builder::add_symbol (std::string value)
 {
-  ast_node::ptr child { new ast_node_atom_symbol {std::move (value)} };
+  ast_node::ptr child { new ast_node_symbol {std::move (value)} };
   m_current_stack.back ()->add_child (child);
   return *this;
 }
@@ -170,7 +170,7 @@ ast_builder::add_symbol (std::string value)
 ast_builder& 
 ast_builder::add_int (int value)
 {
-  ast_node::ptr child { new ast_node_atom_int { value } };
+  ast_node::ptr child { new ast_node_int { value } };
   m_current_stack.back ()->add_child (child);
   return *this;
 }
@@ -195,7 +195,7 @@ ast_builder::add_nil ()
 ast_builder&
 ast_builder::add_string (std::string str)
 {
-  ast_node::ptr child { new ast_node_atom_string {std::move (str)} };
+  ast_node::ptr child { new ast_node_string {std::move (str)} };
   m_current_stack.back ()->add_child (child);
   return *this;
 }
