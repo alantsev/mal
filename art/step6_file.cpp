@@ -38,14 +38,15 @@ readline (const std::string& prompt)
 void
 printline (const std::string& line)
 {
-  std::cout << line << std::endl;
+  if (!line.empty ())
+    std::cout << line << std::endl;
 };
 
 ///////////////////////////////
 ast
-READ (const std::string& prompt)
+READ (const std::string& line)
 {
-  return read_str ( readline (prompt));
+  return read_str (line);
 }
 
 ///////////////////////////////
@@ -264,89 +265,130 @@ eval_ast (ast tree, environment::ptr a_env)
 }
 
 ///////////////////////////////
-void
+std::string
 PRINT (ast tree)
 {
   if (!tree)
-    return;
+    return "";
 
-  printline (pr_str (tree, true));
+  return pr_str (tree, true);
+}
+
+///////////////////////////////
+std::string
+rep (const std::string& line, environment::ptr env)
+{
+  return PRINT (EVAL ( READ (line), env));
+}
+
+
+///////////////////////////////
+template <typename TFn>
+void
+execReplSafe (TFn&& fn)
+{
+  try
+  {
+    fn ();
+  }
+  catch (const mal_exception_parse_error& ex)
+  {
+    printline (std::string ("parse error: ") + ex.what ());
+  }
+  catch (const mal_exception_eval_not_callable& ex)
+  {
+    printline (std::string ("not callable: ") + ex.what ());
+  }
+  catch (const mal_exception_eval_not_int& ex)
+  {
+    printline (std::string ("not int: ") + ex.what ());
+  }
+  catch (const mal_exception_eval_not_list& ex)
+  {
+    printline (std::string ("not list: ") + ex.what ());
+  }
+  catch (const mal_exception_eval_not_symbol& ex)
+  {
+    printline (std::string ("not symbol: ") + ex.what ());
+  }
+  catch (const mal_exception_eval_invalid_arg& ex)
+  {
+    printline (std::string ("invalid arguments: ") + ex.what ());
+  }
+  catch (const mal_exception_eval_no_symbol& ex)
+  {
+    printline (std::string ("no symbol: ") + ex.what ());
+  }
 }
 
 ///////////////////////////////
 void
-rep (const std::string& prompt, environment::ptr env)
+mainRepl (environment::ptr env)
 {
-  PRINT (EVAL ( READ (prompt), env));
-}
+  const std::string prompt = "user> ";
 
-///////////////////////////////
-int
-main(int, char**)
-{
+  // repl
   try
   {
-    const std::string prompt = "user> ";
-
-    auto env = environment::make ();
-    core ns (env);
-
-    // define not function
-    EVAL (read_str ("(def! not (fn* (a) (if a false true)))"), env);
-
-    // eval
-    auto evalFn = [env] (const call_arguments& args) -> ast_node::ptr
-    {
-      const auto args_size = args.size ();
-      if (args_size !=  1)
-        raise<mal_exception_eval_invalid_arg> ();
-      return EVAL (args[0], env);
-    };
-    env->set ("eval", std::make_unique<ast_node_callable_builtin<decltype(evalFn)>> ("eval", evalFn));
-
-    // load file
-    EVAL (read_str ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
-
-    // repl
     for (;;)
     {
-      try
-      {
-
-        rep (prompt, env);
-      }
-      catch (const mal_exception_parse_error& ex)
-      {
-        printline (std::string ("parse error: ") + ex.what ());
-      }
-      catch (const mal_exception_eval_not_callable& ex)
-      {
-        printline (std::string ("not callable: ") + ex.what ());
-      }
-      catch (const mal_exception_eval_not_int& ex)
-      {
-        printline (std::string ("not int: ") + ex.what ());
-      }
-      catch (const mal_exception_eval_not_list& ex)
-      {
-        printline (std::string ("not list: ") + ex.what ());
-      }
-      catch (const mal_exception_eval_not_symbol& ex)
-      {
-        printline (std::string ("not symbol: ") + ex.what ());
-      }
-      catch (const mal_exception_eval_invalid_arg& ex)
-      {
-        printline (std::string ("invalid arguments: ") + ex.what ());
-      }
-      catch (const mal_exception_eval_no_symbol& ex)
-      {
-        printline (std::string ("no symbol: ") + ex.what ());
-      }
+      execReplSafe ([&]() {
+        printline (rep (readline (prompt), env));
+      });
     }
   }
   catch (const mal_exception_stop&)
   {
   }
+
   std::cout << std::endl;
+}
+
+///////////////////////////////
+int
+main(int argc, char** argv)
+{
+  auto env = environment::make ();
+  core ns (env);
+
+  // ext
+  // eval
+  auto evalFn = [env] (const call_arguments& args) -> ast_node::ptr
+  {
+    const auto args_size = args.size ();
+    if (args_size !=  1)
+      raise<mal_exception_eval_invalid_arg> ();
+    return EVAL (args[0], env);
+  };
+  env->set ("eval", std::make_shared<ast_node_callable_builtin<decltype(evalFn)>> ("eval", evalFn));
+
+  // argv
+  auto argvList = std::make_shared <ast_node_list> ();
+  for (size_t i = 1; i < argc; ++i)
+  {
+    argvList->add_child (READ (argv [i]));
+  }
+  env->set ("*ARGV*", argvList);
+
+
+  // MAL
+  // define not function
+  EVAL (READ ("(def! not (fn* (a) (if a false true)))"), env);
+  // load file
+  EVAL (READ ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
+
+  if (argc < 2)
+  {
+    mainRepl (env);
+  }
+  else
+  {
+    const std::string fileName = ast_node_string (argv [1]).to_string (true);
+
+    execReplSafe ([&]() {
+      printline (rep ("(load-file " + fileName + ")", env));
+    });
+  }
+
+  return 0;
 }

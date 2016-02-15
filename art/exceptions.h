@@ -9,6 +9,7 @@ enum class mal_exception_enum : uint32_t
   EVAL_ERROR_NOT_CALLABLE,
   EVAL_ERROR_NOT_INT,
   EVAL_ERROR_NOT_LIST,
+  EVAL_ERROR_NOT_ATOM,
   EVAL_ERROR_NOT_SYMBOL,
   EVAL_ERROR_NOT_STRING,
   EVAL_ERROR_INVALID_ARGUMENT,
@@ -41,6 +42,7 @@ private:
 using mal_exception_parse_error = mal_exception_impl<mal_exception_enum::PARSE_ERROR>;
 using mal_exception_eval_not_callable = mal_exception_impl<mal_exception_enum::EVAL_ERROR_NOT_CALLABLE>;
 using mal_exception_eval_not_int = mal_exception_impl<mal_exception_enum::EVAL_ERROR_NOT_INT>;
+using mal_exception_eval_not_atom = mal_exception_impl<mal_exception_enum::EVAL_ERROR_NOT_ATOM>;
 using mal_exception_eval_not_list = mal_exception_impl<mal_exception_enum::EVAL_ERROR_NOT_LIST>;
 using mal_exception_eval_not_string = mal_exception_impl<mal_exception_enum::EVAL_ERROR_NOT_STRING>;
 using mal_exception_eval_not_symbol = mal_exception_impl<mal_exception_enum::EVAL_ERROR_NOT_SYMBOL>;

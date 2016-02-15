@@ -287,6 +287,54 @@ builtin_slurp (const call_arguments& args)
   return std::make_shared<ast_node_string> (std::move (allText));
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_atom (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return std::make_shared<ast_node_atom> (args[0]);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_is_atom (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return ast_node_from_bool (args[0]->type () == node_type_enum::ATOM);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_deref (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return args[0]->as_or_throw<ast_node_atom, mal_exception_eval_not_atom> ()->get_value ();
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_reset (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto atom = args[0]->as_or_throw<ast_node_atom, mal_exception_eval_not_atom> ();
+  auto val = args[1];
+
+  atom->set_value (val);
+  return val;
+}
+
 } // end of anonymous namespace
 
 ///////////////////////////////
@@ -315,6 +363,11 @@ core::core (environment::ptr root_env)
 
   env_add_builtin ("read-string", builtin_read_string);
   env_add_builtin ("slurp", builtin_slurp);
+
+  env_add_builtin ("atom", builtin_atom);
+  env_add_builtin ("atom?", builtin_is_atom);
+  env_add_builtin ("deref", builtin_deref);
+  env_add_builtin ("reset!", builtin_reset);
 
   for (auto&& c : content ())
   {

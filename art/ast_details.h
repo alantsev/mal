@@ -21,9 +21,33 @@ public:
 };
 
 ///////////////////////////////
-template <node_type_enum NODE_TYPE>
 class ast_node_atom : public ast_node_base<node_type_enum::ATOM>
-{};
+{
+public:
+  ast_node_atom (ast_node::ptr value) : m_value (value) {}
+  std::string to_string (bool print_readable) const override
+  {
+    return "(atom " + m_value->to_string (print_readable) + ")";
+  }
+
+  bool operator == (const ast_node& rp) const override
+  {
+    return this == std::addressof (rp);
+  }
+
+  void set_value (ast_node::ptr value)
+  {
+    m_value = value;
+  }
+
+  ast_node::ptr get_value () const
+  {
+    return m_value;
+  }
+
+private:
+  ast_node::ptr m_value;
+};
 
 ///////////////////////////////
 class ast_node_symbol : public ast_node_base <node_type_enum::SYMBOL>
