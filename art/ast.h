@@ -34,7 +34,7 @@ enum class node_type_enum
 class ast_node
 {
 public:
-  using ptr = std::shared_ptr <ast_node>;
+  using ptr = std::shared_ptr <const ast_node>;
 
   static ptr nil_node;
   static ptr true_node;

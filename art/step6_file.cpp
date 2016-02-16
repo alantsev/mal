@@ -303,6 +303,10 @@ execReplSafe (TFn&& fn)
   {
     printline (std::string ("not int: ") + ex.what ());
   }
+  catch (const mal_exception_eval_not_atom& ex)
+  {
+    printline (std::string ("not atom: ") + ex.what ());
+  }
   catch (const mal_exception_eval_not_list& ex)
   {
     printline (std::string ("not list: ") + ex.what ());
@@ -363,19 +367,23 @@ main(int argc, char** argv)
   env->set ("eval", std::make_shared<ast_node_callable_builtin<decltype(evalFn)>> ("eval", evalFn));
 
   // argv
-  auto argvList = std::make_shared <ast_node_list> ();
+  ast_builder argvBuilder;
+  argvBuilder.open_list ();
   for (size_t i = 1; i < argc; ++i)
   {
-    argvList->add_child (READ (argv [i]));
+    argvBuilder.add_node (READ (argv [i]));
   }
-  env->set ("*ARGV*", argvList);
-
+  argvBuilder.close_list ();
+  env->set ("*ARGV*", argvBuilder.build ());
 
   // MAL
   // define not function
   EVAL (READ ("(def! not (fn* (a) (if a false true)))"), env);
   // load file
   EVAL (READ ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
+  // swap!
+  EVAL (READ ("(def! swap! (fn* [swapAtom swapFn & swapArgs] (do (reset! swapAtom (eval (concat (list swapFn) (list (deref swapAtom)) swapArgs))) (deref swapAtom) ) ) )"), env);
+  
 
   if (argc < 2)
   {

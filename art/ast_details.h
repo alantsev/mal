@@ -35,7 +35,8 @@ public:
     return this == std::addressof (rp);
   }
 
-  void set_value (ast_node::ptr value)
+  // actually it's non-const method
+  void set_value (ast_node::ptr value) const
   {
     m_value = value;
   }
@@ -46,7 +47,7 @@ public:
   }
 
 private:
-  ast_node::ptr m_value;
+  mutable ast_node::ptr m_value;
 };
 
 ///////////////////////////////
@@ -464,6 +465,8 @@ public:
   ast_builder& start_string ();
   ast_builder& append_string (const std::string &piece);
   ast_builder& finish_string ();
+
+  ast_builder& add_node (ast_node::ptr);
 
   ast build();
 

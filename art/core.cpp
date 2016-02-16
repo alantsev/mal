@@ -335,6 +335,26 @@ builtin_reset (const call_arguments& args)
   return val;
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_concat (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+
+  ast_builder argvBuilder;
+  argvBuilder.open_list ();
+  for (size_t i = 0; i < args_size; ++i)
+  {
+    auto l = args[i]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+    for (size_t j = 0, je = l->size (); j < je; ++j)
+    {
+      argvBuilder.add_node ((*l) [j]);
+    }
+  }
+  argvBuilder.close_list ();
+  return argvBuilder.build ();
+}
+
 } // end of anonymous namespace
 
 ///////////////////////////////
@@ -368,6 +388,9 @@ core::core (environment::ptr root_env)
   env_add_builtin ("atom?", builtin_is_atom);
   env_add_builtin ("deref", builtin_deref);
   env_add_builtin ("reset!", builtin_reset);
+
+//  env_add_builtin ("cons", builtin_cons);
+  env_add_builtin ("concat", builtin_concat);
 
   for (auto&& c : content ())
   {

@@ -193,6 +193,14 @@ ast_builder::add_nil ()
 
 ///////////////////////////////
 ast_builder&
+ast_builder::add_node (ast_node::ptr node)
+{
+  m_current_stack.back ()->add_child (node);
+  return *this;
+}
+
+///////////////////////////////
+ast_builder&
 ast_builder::add_string (std::string str)
 {
   ast_node::ptr child { new ast_node_string {std::move (str)} };
