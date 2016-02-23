@@ -4,6 +4,9 @@
 #include "ast.h"
 #include "environment.h"
 
+#include <vector>
+#include <deque>
+
 ///////////////////////////////
 template <node_type_enum NODE_TYPE>
 class ast_node_base : public ast_node
@@ -466,13 +469,21 @@ public:
   ast_builder& append_string (const std::string &piece);
   ast_builder& finish_string ();
 
+  //
   ast_builder& add_node (ast_node::ptr);
 
   ast build();
 
+  //
+  inline size_t level () const
+  {
+    assert (m_current_stack.size () > 0);
+    return m_current_stack.size () - 1;
+  }
+
 private:
   std::unique_ptr<ast_node_list> m_meta_root;
-  std::vector<ast_node_container_base*> m_current_stack;
+  std::deque<ast_node_container_base*> m_current_stack;
   std::string m_picewise_string;
 };
 

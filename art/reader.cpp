@@ -8,6 +8,7 @@
 #include <cstdlib>
 
 #include <functional>
+#include <deque>
 
 ///////////////////////////////
 namespace
@@ -20,26 +21,62 @@ public:
   reader (const std::string &line)
     : m_line (line)
   {
+    m_builders.emplace_back ();
     for (auto ch : m_line)
     {
       ++m_current_position;
       call_op (ch);
     }
-    if (m_currrent_state == state_enum::COMMENT_STATE)
-      return;
 
-    if (m_currrent_state != state_enum::NORMAL_STATE)
-      raise<mal_exception_parse_error> ("expected \" , got EOF");
+    if (m_currrent_state != state_enum::COMMENT_STATE)
+    {
+      if (m_currrent_state == state_enum::STRING_STATE || m_currrent_state == state_enum::ESCAPED_STRING_STATE)
+        raise<mal_exception_parse_error> ("expected \" , got EOF");
 
-    process_token (m_last_delim_position, m_current_position + 1);
+      assert (m_currrent_state == state_enum::NON_EXPAND_NORMAL_STATE || m_currrent_state == state_enum::EXPAND_NORMAL_STATE);
+
+
+      process_token (m_last_delim_position, m_current_position + 1);
+    }
+
+    while (m_builders.size () > 1)
+    {
+      close_macro_expand ();
+    }
   }
 
   ast build ()
   {
-    return m_builder.build ();
+    assert (m_builders.size () == 1);
+    return m_builders.back ().build ();
   }
 
 private:
+  //
+  void open_macro_expand (std::string macroSymbol)
+  {
+    m_builders.back ()
+      .open_list ()
+      .add_symbol (std::move (macroSymbol));
+    m_builders.emplace_back ();
+  }
+
+  //
+  void close_macro_expand ()
+  {
+    assert (m_builders.size () > 1);
+    auto node = m_builders.back ().build ();
+    m_builders.pop_back ();
+    m_builders.back ().add_node (node).close_list ();
+  }
+
+  //
+  void close_macro_expand_for_top_level ()
+  {
+    if (m_builders.size () > 1 && m_builders.back ().level () == 0)
+      close_macro_expand ();
+  }
+
   //
   void call_op (char ch)
   {
@@ -58,28 +95,30 @@ private:
       int valInt = std::strtol (m_line.data () + from, &end, 10);
       if (end == m_line.data () + to - 1)
       {
-        m_builder.add_int (valInt);
+        m_builders.back ().add_int (valInt);
       }
       else
       {
         std::string token = m_line.substr (from, to - from - 1);
         if (token == "false")
         {
-          m_builder.add_bool (false);
+          m_builders.back ().add_bool (false);
         }
         else if (token == "true")
         {
-          m_builder.add_bool (true);
+          m_builders.back ().add_bool (true);
         }
         else if (token == "nil")
         {
-          m_builder.add_nil ();
+          m_builders.back ().add_nil ();
         }
         else
         {
-          m_builder.add_symbol (std::move (token));
+          m_builders.back ().add_symbol (std::move (token));
         }
       }
+
+      close_macro_expand_for_top_level ();
     }
   }
 
@@ -87,49 +126,78 @@ private:
   {
     if (from + 1 < to)
     {
-      m_builder.append_string (m_line.substr (from, to - from - 1));
+      m_builders.back ().append_string (m_line.substr (from, to - from - 1));
     }
   }
 
   //
-  void normal_parse_fn (char ch)
+  void mark_delimiter ()
+  {
+    m_last_delim_position = m_current_position;
+    m_currrent_state = state_enum::EXPAND_NORMAL_STATE;
+  }
+
+  //
+  void expand_normal_parse_fn (char ch)
+  {
+    switch (ch)
+    {
+      case '@':
+      {
+        m_last_delim_position = m_current_position;
+        open_macro_expand ("deref");
+        break;
+      }
+      default:
+      {
+        m_currrent_state = state_enum::NON_EXPAND_NORMAL_STATE;
+        call_op (ch);
+        break;
+      }
+    };
+  }
+
+
+  //
+  void non_expand_normal_parse_fn (char ch)
   {
     switch (ch)
     {
       case '(':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_last_delim_position = m_current_position;
-        m_builder.open_list ();
+        m_builders.back ().open_list ();
+        mark_delimiter ();
         break;
       }
       case ')':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_last_delim_position = m_current_position;
-        m_builder.close_list ();
+        m_builders.back ().close_list ();
+        mark_delimiter ();
+        close_macro_expand_for_top_level ();
         break;
       }
       case '[':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_last_delim_position = m_current_position;
-        m_builder.open_vector ();
+        m_builders.back ().open_vector ();
+        mark_delimiter ();
         break;
       }
       case ']':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_last_delim_position = m_current_position;
-        m_builder.close_vector ();
+        m_builders.back ().close_vector ();
+        mark_delimiter ();
+        close_macro_expand_for_top_level ();
         break;
       }
       case '"':
       {
-        m_currrent_state = state_enum::STRING_STATE;
         process_token (m_last_delim_position, m_current_position);
-        m_builder.start_string ();
-
+        m_builders.back ().start_string ();
+        m_currrent_state = state_enum::STRING_STATE;
         m_last_delim_position = m_current_position;
         break;
       }
@@ -145,7 +213,7 @@ private:
         if (std::isspace (ch) || ch == ',')
         {
           process_token (m_last_delim_position, m_current_position);
-          m_last_delim_position = m_current_position;
+          mark_delimiter ();
         }
         break;
       }
@@ -159,10 +227,11 @@ private:
     {
       case '"':
       {
-        m_currrent_state = state_enum::NORMAL_STATE;
+        m_currrent_state = state_enum::EXPAND_NORMAL_STATE;
         process_string (m_last_delim_position, m_current_position);
-        m_builder.finish_string ();
+        m_builders.back ().finish_string ();
         m_last_delim_position = m_current_position;
+        close_macro_expand_for_top_level ();
         break;
       }
       case '\\':
@@ -182,12 +251,12 @@ private:
     {
       case 'n':
       {
-        m_builder.append_string ("\n");
+        m_builders.back ().append_string ("\n");
         break;
       }
       default:
       {
-        m_builder.append_string ({ch});
+        m_builders.back ().append_string ({ch});
         break;
       }
     };
@@ -201,7 +270,7 @@ private:
     {
       case '\n':
       {
-        m_currrent_state = state_enum::NORMAL_STATE;
+        m_currrent_state = state_enum::EXPAND_NORMAL_STATE;
         m_last_delim_position = m_current_position;
         break;
       }
@@ -213,7 +282,8 @@ private:
 
   enum class state_enum
   {
-    NORMAL_STATE = 0,
+    EXPAND_NORMAL_STATE = 0,
+    NON_EXPAND_NORMAL_STATE ,
     STRING_STATE,
     ESCAPED_STRING_STATE,
     COMMENT_STATE,
@@ -228,11 +298,11 @@ private:
 
   static state_fn_type m_state_op [static_cast<int> (state_enum::COUNT)][static_cast<int> (operation_enum::COUNT)];
 
-  state_enum m_currrent_state {state_enum::NORMAL_STATE};
+  state_enum m_currrent_state {state_enum::EXPAND_NORMAL_STATE};
 
   //
-  const std::string m_line;
-  ast_builder m_builder;
+  const std::string &m_line;
+  std::deque<ast_builder> m_builders;
 
   size_t m_last_delim_position = 0;
   size_t m_current_position = 0;
@@ -242,10 +312,16 @@ private:
 reader::state_fn_type
 reader::m_state_op [static_cast<int> (state_enum::COUNT)][static_cast<int> (operation_enum::COUNT)] = 
 {
-  // NORMAL_STATE
+  // EXPAND_NORMAL_STATE
   {
     // NORMAL_OPERATION
-    &reader::normal_parse_fn
+    &reader::expand_normal_parse_fn
+  }, 
+
+  // NON_EXPAND_NORMAL_STATE
+  {
+    // NORMAL_OPERATION
+    &reader::non_expand_normal_parse_fn
   }, 
 
   // STRING_STATE
