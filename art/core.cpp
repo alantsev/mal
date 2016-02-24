@@ -337,6 +337,26 @@ builtin_reset (const call_arguments& args)
 
 ///////////////////////////////
 ast_node::ptr
+builtin_cons (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  ast_builder argvBuilder;
+  argvBuilder.open_list ();
+  argvBuilder.add_node (args [0]);
+  auto l = args[1]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+  for (size_t j = 0, je = l->size (); j < je; ++j)
+  {
+    argvBuilder.add_node ((*l) [j]);
+  }
+  argvBuilder.close_list ();
+  return argvBuilder.build ();
+}
+
+///////////////////////////////
+ast_node::ptr
 builtin_concat (const call_arguments& args)
 {
   const auto args_size = args.size ();
@@ -389,7 +409,7 @@ core::core (environment::ptr root_env)
   env_add_builtin ("deref", builtin_deref);
   env_add_builtin ("reset!", builtin_reset);
 
-//  env_add_builtin ("cons", builtin_cons);
+  env_add_builtin ("cons", builtin_cons);
   env_add_builtin ("concat", builtin_concat);
 
   for (auto&& c : content ())

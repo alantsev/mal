@@ -73,7 +73,7 @@ private:
   //
   void close_macro_expand_for_top_level ()
   {
-    if (m_builders.size () > 1 && m_builders.back ().level () == 0)
+    while (m_builders.size () > 1 && m_builders.back ().level () == 0)
       close_macro_expand ();
   }
 
@@ -148,6 +148,25 @@ private:
         open_macro_expand ("deref");
         break;
       }
+      case '\'':
+      {
+        m_last_delim_position = m_current_position;
+        open_macro_expand ("quote");
+        break;
+      }
+      case '`':
+      {
+        m_last_delim_position = m_current_position;
+        open_macro_expand ("quasiquote");
+        break;
+      }
+      case '~':
+      {
+        m_last_delim_position = m_current_position;
+        open_macro_expand ("unquote");
+        break;
+      }
+
       default:
       {
         m_currrent_state = state_enum::NON_EXPAND_NORMAL_STATE;

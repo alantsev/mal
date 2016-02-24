@@ -183,6 +183,15 @@ EVAL (ast tree, environment::ptr a_env)
       return retVal;
     };
 
+    auto fn_handle_quote = [root_list, &a_env] () -> ast
+    {
+      const size_t list_size = root_list->size ();
+      if (list_size != 2)
+        raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+
+      return (*root_list)[1];
+    };
+
     auto first = (*root_list)[0];
     if (first->type () == node_type_enum::SYMBOL)
     {
@@ -217,6 +226,11 @@ EVAL (ast tree, environment::ptr a_env)
       {
         return fn_handle_fn ();
       }
+      else if (symbol == "quote")
+      {
+        return fn_handle_quote ();
+      }
+
     }
 
     // apply
