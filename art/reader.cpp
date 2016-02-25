@@ -22,8 +22,9 @@ public:
     : m_line (line)
   {
     m_builders.emplace_back ();
-    for (auto ch : m_line)
+    for (size_t e = m_line.length (); m_current_position < e;)
     {
+      auto ch = m_line [m_current_position];
       ++m_current_position;
       call_op (ch);
     }
@@ -162,8 +163,17 @@ private:
       }
       case '~':
       {
+        if (m_current_position < m_line.length () && m_line[m_current_position] == '@')
+        {
+          open_macro_expand ("splice-unquote");
+          ++m_current_position;
+        }
+        else
+        {
+          open_macro_expand ("unquote");
+        }
+
         m_last_delim_position = m_current_position;
-        open_macro_expand ("unquote");
         break;
       }
 
