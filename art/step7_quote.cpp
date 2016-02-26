@@ -54,10 +54,61 @@ ast
 eval_ast (ast tree, environment::ptr a_env); // fwd decl
 
 ///////////////////////////////
-// FIXME - make it loop over 
-//   - eval_ast
-//   - apply
-// 
+ast
+EVAL (ast tree, environment::ptr a_env); // fwd decl
+
+///////////////////////////////
+// tco
+tco 
+handle_quasiquote_impl (ast_node::ptr node, environment::ptr a_env)
+{
+  auto is_pair = [] (const ast_node::ptr& p) -> bool
+  {
+    auto p_list = p->as_or_zero<ast_node_container_base> ();
+    return p_list ? p_list->size () != 0 : false;
+  };
+
+  if (!is_pair (node))
+    return tco {nullptr, nullptr, node};
+
+  // it's non-empy list
+  auto nodeList = node->as<ast_node_container_base> ();
+  auto nodeListFirstSym = (*nodeList)[0]->as_or_zero<ast_node_symbol> ();
+
+  if (nodeListFirstSym && nodeListFirstSym->symbol () == "unquote")
+  {
+    if (nodeList->size () != 2)
+      raise<mal_exception_eval_invalid_arg> (nodeList->to_string ());
+    return tco {(*nodeList)[1], a_env};
+  }
+
+  // slice-unquote - FIXME
+
+  auto retVal = nodeList->map (
+        [&a_env] (ast_node::ptr v) -> ast_node::ptr { 
+          ast_node::ptr retVal;
+          ast_node::ptr newNode;
+          environment::ptr newEnv;
+          std::tie (newNode, newEnv, retVal) = handle_quasiquote_impl (v, a_env);
+          if (retVal)
+            return retVal;
+
+          return EVAL (newNode, newEnv);
+        });
+
+  return tco {nullptr, nullptr, retVal};
+};
+
+tco 
+handle_quasiquote (const ast_node_list *root_list, environment::ptr a_env)
+{
+  const size_t list_size = root_list->size ();
+  if (list_size != 2)
+    raise<mal_exception_eval_invalid_arg> (root_list->to_string ());
+  return handle_quasiquote_impl ((*root_list)[1], a_env);
+};
+
+///////////////////////////////
 ast
 EVAL (ast tree, environment::ptr a_env)
 {
@@ -230,7 +281,14 @@ EVAL (ast tree, environment::ptr a_env)
       {
         return fn_handle_quote ();
       }
-
+      else if (symbol == "quasiquote")
+      {
+        ast retVal;
+        std::tie (tree, a_env, retVal) = handle_quasiquote (root_list, a_env);
+        if (retVal)
+          return retVal;
+        continue;
+      }
     }
 
     // apply

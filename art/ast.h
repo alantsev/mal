@@ -83,14 +83,14 @@ public:
     return static_cast<const T*> (this);
   }
 
-  template <typename T, typename TException>
+  template <typename T>
   T* as_or_zero ()
   {
     if (!T::IS_VALID_TYPE (type ()))
       return nullptr;
     return static_cast<T*> (this);
   }
-  template <typename T, typename TException>
+  template <typename T>
   const T* as_or_zero () const
   {
     if (!T::IS_VALID_TYPE (type ()))
