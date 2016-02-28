@@ -90,6 +90,13 @@ private:
   //
   void process_token (size_t from, size_t to) 
   {
+    auto get_token = [from, to, this] ()  -> std::string
+    {
+      return m_line.substr (from, to - from - 1);
+    };
+
+    // TODO - check keyword first
+
     if (from + 1 < to)
     {
       char *end;
@@ -100,8 +107,12 @@ private:
       }
       else
       {
-        std::string token = m_line.substr (from, to - from - 1);
-        if (token == "false")
+        const std::string token = get_token ();
+        if (token[0] == ':')
+        {
+          m_builders.back ().add_keyword (std::move (token));
+        }
+        else if (token == "false")
         {
           m_builders.back ().add_bool (false);
         }

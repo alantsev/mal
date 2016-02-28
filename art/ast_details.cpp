@@ -168,6 +168,15 @@ ast_builder::add_symbol (std::string value)
 
 ///////////////////////////////
 ast_builder& 
+ast_builder::add_keyword (std::string keyword)
+{
+  ast_node::ptr child { new ast_node_keyword {std::move (keyword)} };
+  m_current_stack.back ()->add_child (child);
+  return *this;
+}
+
+///////////////////////////////
+ast_builder& 
 ast_builder::add_int (int value)
 {
   ast_node::ptr child { new ast_node_int { value } };

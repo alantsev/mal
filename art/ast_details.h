@@ -126,6 +126,38 @@ private:
 };
 
 ///////////////////////////////
+class ast_node_keyword : public ast_node_base <node_type_enum::KEYWORD>
+{
+public:
+  ast_node_keyword (std::string val)
+    : m_keyword (std::move (val))
+  {}
+
+  std::string to_string (bool print_readable) const override
+  {
+    UNUSED (print_readable);
+    return m_keyword;
+  }
+
+  const std::string& keyword () const
+  {
+    return m_keyword;
+  }
+
+  bool operator == (const ast_node& rp) const override
+  {
+    if (!IS_VALID_TYPE (rp.type ()))
+      return false;
+
+    return m_keyword == rp.as<ast_node_keyword> ()->m_keyword;
+  }
+
+private:
+  //
+  std::string m_keyword;
+};
+
+///////////////////////////////
 class ast_node_int : public ast_node_base <node_type_enum::INT>
 {
 public:
@@ -456,6 +488,7 @@ public:
   ast_builder& close_vector ();
 
   ast_builder& add_symbol (std::string);
+  ast_builder& add_keyword (std::string);
   ast_builder& add_int (int);
 
   ast_builder& add_bool (bool val);
