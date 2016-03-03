@@ -73,28 +73,63 @@ handle_quasiquote_impl (ast_node::ptr node, environment::ptr a_env)
 
   // it's non-empy list
   auto nodeList = node->as<ast_node_container_base> ();
+  const auto nodeListSize = nodeList->size ();
   auto nodeListFirstSym = (*nodeList)[0]->as_or_zero<ast_node_symbol> ();
 
   if (nodeListFirstSym && nodeListFirstSym->symbol () == "unquote")
   {
-    if (nodeList->size () != 2)
+    if (nodeListSize != 2)
       raise<mal_exception_eval_invalid_arg> (nodeList->to_string ());
     return tco {(*nodeList)[1], a_env};
   }
 
-  // slice-unquote - FIXME
+  //
+  auto mapFn = [&a_env] (ast_node::ptr v) -> ast_node::ptr { 
+    ast_node::ptr retVal;
+    ast_node::ptr newNode;
+    environment::ptr newEnv;
+    std::tie (newNode, newEnv, retVal) = handle_quasiquote_impl (v, a_env);
+    if (retVal)
+      return retVal;
 
-  auto retVal = nodeList->map (
-        [&a_env] (ast_node::ptr v) -> ast_node::ptr { 
-          ast_node::ptr retVal;
-          ast_node::ptr newNode;
-          environment::ptr newEnv;
-          std::tie (newNode, newEnv, retVal) = handle_quasiquote_impl (v, a_env);
-          if (retVal)
-            return retVal;
+    return EVAL (newNode, newEnv);
+  };
 
-          return EVAL (newNode, newEnv);
-        });
+  ast_builder argvBuilder;
+  argvBuilder.open_list ();
+  for (size_t i = 0; i < nodeListSize; ++i)
+  {
+    auto && v = (*nodeList) [i];
+
+    // splice-unquote
+    if (is_pair (v))
+    {
+      auto childNodeList = v->as<ast_node_container_base> ();
+      auto childSymCom = (*childNodeList)[0]->as_or_zero<ast_node_symbol> ();
+      if (childSymCom && childSymCom->symbol () == "splice-unquote")
+      {
+        const auto spliceUnquteSize = childNodeList->size ();
+        if (spliceUnquteSize != 2)
+          raise<mal_exception_eval_invalid_arg> (childNodeList->to_string ());
+
+        auto evaledList = EVAL ((*childNodeList)[1], a_env);
+        auto splicedList = evaledList->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
+
+        for (size_t c = 0, ce = splicedList->size (); c < ce; ++c)
+        {
+          auto && cv = (*splicedList) [c];
+          argvBuilder.add_node (mapFn (cv));
+        }
+
+        continue;
+      }
+    }
+
+    // or add 
+    argvBuilder.add_node (mapFn (v));
+  }
+  argvBuilder.close_list ();
+  auto retVal = argvBuilder.build ();
 
   return tco {nullptr, nullptr, retVal};
 };
