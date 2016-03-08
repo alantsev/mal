@@ -53,6 +53,8 @@ public:
   virtual node_type_enum type () const = 0;
 
   virtual bool operator == (const ast_node&) const = 0;
+  virtual uint32_t hash () const = 0;
+
 
   //
   template <typename T>

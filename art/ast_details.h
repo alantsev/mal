@@ -6,6 +6,8 @@
 
 #include <vector>
 #include <deque>
+#include <functional>
+#include <string>
 
 ///////////////////////////////
 template <node_type_enum NODE_TYPE>
@@ -49,6 +51,12 @@ public:
     return m_value;
   }
 
+  uint32_t hash () const override
+  {
+    const uint32_t retVal = reinterpret_cast<uint64_t> (this) * 2052828881 + 541325663;
+    return retVal;
+  }
+
 private:
   mutable ast_node::ptr m_value;
 };
@@ -71,6 +79,11 @@ public:
       return false;
 
     return m_symbol == rp.as<ast_node_symbol> ()->m_symbol;
+  }
+
+  uint32_t hash () const override
+  {
+    return std::hash<std::string> () (m_symbol);
   }
 
 private:
@@ -108,6 +121,11 @@ public:
       return false;
 
     return m_value == rp.as<ast_node_string> ()->m_value;
+  }
+
+  uint32_t hash () const override
+  {
+    return std::hash<std::string> () (m_value) * 547449787 + 1550872369;
   }
 
 private:
@@ -152,6 +170,11 @@ public:
     return m_keyword == rp.as<ast_node_keyword> ()->m_keyword;
   }
 
+  uint32_t hash () const override
+  {
+    return std::hash<std::string> () (m_keyword) * 1965751841 + 311457019;
+  }
+
 private:
   //
   std::string m_keyword;
@@ -175,6 +198,11 @@ public:
       return false;
 
     return m_value == rp.as<ast_node_int> ()->m_value;
+  }
+
+  uint32_t hash () const override
+  {
+    return std::hash<int> () (m_value);
   }
 
 private:
@@ -208,6 +236,10 @@ public:
     return this == &rp;
   }
 
+  uint32_t hash () const override
+  {
+    return std::hash<bool> () (VALUE);
+  }
 };
 
 ///////////////////////////////
@@ -224,6 +256,12 @@ public:
 
     return this == &rp;
   }
+
+  uint32_t hash () const override
+  {
+    return std::hash<uint32_t> () (1);
+  }
+
 };
 
 ///////////////////////////////
@@ -357,6 +395,16 @@ class ast_node_list : public ast_node_container_crtp <node_type_enum::LIST, ast_
 public:
   using ast_node::to_string;
   std::string to_string (bool print_readable) const override;
+
+  uint32_t hash () const override
+  {
+    uint32_t retVal = 1003322101;
+    for (auto && p : m_children)
+    {
+      retVal = (retVal + p->hash ()) * 291675463 + 1003322101;
+    }
+    return retVal;
+  }
 };
 
 ///////////////////////////////
@@ -364,6 +412,16 @@ class ast_node_vector : public ast_node_container_crtp <node_type_enum::VECTOR, 
 {
 public:
   std::string to_string (bool print_readably) const override;
+
+  uint32_t hash () const override
+  {
+    uint32_t retVal = 1722983309;
+    for (auto && p : m_children)
+    {
+      retVal = (retVal + p->hash ()) * 824928359 + 1722983309;
+    }
+    return retVal;
+  }
 };
 
 ///////////////////////////////
@@ -393,6 +451,11 @@ public:
       return false;
 
     return signature () == rp.as<ast_node_callable_builtin_base> ()->signature ();
+  }
+
+  uint32_t hash () const override
+  {
+    return std::hash<std::string> () (m_signature) * 769451167 + 267085321;
   }
 
 protected:
@@ -467,6 +530,11 @@ public:
     return node_type_enum::CALLABLE_LAMBDA;
   }
 
+  uint32_t hash () const override
+  {
+    return (m_binds->hash () * 1622000167 + 582512737) * m_ast->hash () + 2152752083;
+  }
+
 private:
   ast_node::ptr m_binds;
   const ast_node_container_base* m_binds_as_container;
@@ -474,6 +542,9 @@ private:
   ast_node::ptr m_ast;
   environment::const_ptr m_outer_env;
 };
+
+///////////////////////////////
+// std::hash here
 
 ///////////////////////////////
 class ast_builder
