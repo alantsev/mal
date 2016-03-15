@@ -624,13 +624,13 @@ private:
 };
 
 ///////////////////////////////
-// std::hash here
-
-///////////////////////////////
 class ast_builder
 {
 public:
   ast_builder ();
+
+  ast_builder& open_hashmap ();
+  ast_builder& close_hashmap ();
 
   ast_builder& open_list ();
   ast_builder& close_list ();

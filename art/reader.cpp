@@ -218,6 +218,21 @@ private:
         close_macro_expand_for_top_level ();
         break;
       }
+      case '{':
+      {
+        process_token (m_last_delim_position, m_current_position);
+        m_builders.back ().open_hashmap ();
+        mark_delimiter ();
+        break;
+      }
+      case '}':
+      {
+        process_token (m_last_delim_position, m_current_position);
+        m_builders.back ().close_hashmap ();
+        mark_delimiter ();
+        close_macro_expand_for_top_level ();
+        break;
+      }
       case '[':
       {
         process_token (m_last_delim_position, m_current_position);

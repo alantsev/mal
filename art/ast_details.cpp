@@ -242,23 +242,37 @@ ast_builder::finish_string ()
 }
 
 ///////////////////////////////
+ast_builder&
+ast_builder::open_hashmap ()
+{
+  // FIXME - 
+  return *this;
+}
+
+///////////////////////////////
+ast_builder&
+ast_builder::close_hashmap ()
+{
+  // FIXME - 
+  return *this;
+}
+
+///////////////////////////////
 ast 
 ast_builder::build()
 {
   if (m_current_stack.size () != 1) 
     raise<mal_exception_parse_error> ();
 
-  const size_t level0_count = m_current_stack.back()->size (); 
+  const size_t level0_count = m_meta_root->size (); 
   if (level0_count > 1) 
-    raise<mal_exception_parse_error> ();
+    raise<mal_exception_parse_error> (m_meta_root->to_string ());
 
   if (level0_count == 0)
     return ast {};
 
-  auto root = m_current_stack.back()->as_or_throw<ast_node_list, mal_exception_parse_error> ();
-
-  assert (root->size () > 0);
-  ast_node::ptr retVal = (*root) [0];
+  assert (m_meta_root->size () > 0);
+  ast_node::ptr retVal = (*m_meta_root) [0];
   m_current_stack.clear ();
   m_meta_root.reset ();
 
