@@ -3,6 +3,7 @@
 #include "MAL.h"
 #include "ast.h"
 #include "environment.h"
+#include "exceptions.h"
 
 #include <vector>
 #include <deque>
@@ -436,7 +437,7 @@ public:
 
   static constexpr bool IS_VALID_TYPE (node_type_enum t)
   {
-    return (t == node_type_enum::CALLABLE_BUILTIN) || (t == node_type_enum::CALLABLE_LAMBDA);
+    return (t == node_type_enum::CALLABLE_BUILTIN) || (t == node_type_enum::CALLABLE_LAMBDA) || (t == node_type_enum::HASHMAP);
   }
 };
 
@@ -541,6 +542,85 @@ private:
 
   ast_node::ptr m_ast;
   environment::const_ptr m_outer_env;
+};
+
+///////////////////////////////
+class ast_node_hashmap : public ast_node_callable
+{
+public:
+  ast_node_hashmap () {}
+
+  std::string to_string (bool print_readable) const override
+  {
+    std::string retVal = "{";
+    size_t i = 0;
+    for (auto && p : m_hashtable)
+    {
+      if (i != 0)
+        retVal += " ";
+      retVal += p.first->to_string (print_readable) + " " + p.second->to_string (print_readable);
+      ++i;
+    }
+    retVal += "}";
+
+    return retVal;
+  }
+
+  tco call_tco (const call_arguments &args) const override
+  {
+    // TODO - 
+    if (args.size () != 1)
+      raise<mal_exception_eval_invalid_arg> ("");
+
+    auto it = m_hashtable.find (args [0]);
+    return tco{nullptr, nullptr, it != m_hashtable.end () ? it->second : ast_node::nil_node};
+  }
+
+  bool operator == (const ast_node& rp) const override
+  {
+    if (type () != rp.type ())
+      return false;
+
+    auto rp_hashmap = rp.as<ast_node_hashmap> ();
+    return m_hashtable == rp_hashmap->m_hashtable;
+  }
+
+  node_type_enum type () const override
+  {
+    return node_type_enum::HASHMAP;
+  }
+
+  uint32_t hash () const override
+  {
+    uint32_t retVal = 582512737;
+    for (auto && p : m_hashtable)
+    {
+      retVal = (retVal + p.first->hash ()) * 1622000167 + 2152752083;
+      retVal = (retVal + p.second->hash ()) * 1622000167 + 2152752083;
+    }
+    return retVal;
+  }
+
+private:
+  struct ast_node_hash
+  {
+    uint32_t operator () (ast_node::ptr v) const
+    {
+      return v ? v->hash () : 0;
+    }
+  };
+
+  struct ast_node_eq
+  {
+    bool operator () (ast_node::ptr v1, ast_node::ptr v2) const
+    {
+      return v1 == v2 ? true :
+             v1 && v2 ? *v1 == *v2 : false;
+    }
+
+  };
+
+  std::unordered_map <ast_node::ptr, ast_node::ptr, ast_node_hash, ast_node_eq> m_hashtable;
 };
 
 ///////////////////////////////
