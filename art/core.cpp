@@ -375,6 +375,60 @@ builtin_concat (const call_arguments& args)
   return argvBuilder.build ();
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_nth (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto l = args[0]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+  auto n = args[1]->as_or_throw<ast_node_int, mal_exception_eval_not_int> ()->value ();
+
+  if (n < 0 || n >= l->size ())
+    return ast_node::nil_node;
+
+  return (*l) [n];
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_first (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto l = args[0]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+
+  if (l->empty ())
+    return ast_node::nil_node;
+
+  return (*l) [0];
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_rest (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto l = args[0]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+  const auto lSize = l->size ();
+
+  ast_builder argvBuilder;
+  argvBuilder.open_list ();
+  for (size_t i = 1; i < lSize; ++i)
+  {
+    argvBuilder.add_node ((*l) [i]);
+  }
+  argvBuilder.close_list ();
+  return argvBuilder.build ();
+}
+
 } // end of anonymous namespace
 
 ///////////////////////////////
@@ -411,6 +465,10 @@ core::core (environment::ptr root_env)
 
   env_add_builtin ("cons", builtin_cons);
   env_add_builtin ("concat", builtin_concat);
+
+  env_add_builtin ("nth", builtin_nth);
+  env_add_builtin ("first", builtin_first);
+  env_add_builtin ("rest", builtin_rest);
 
   for (auto&& c : content ())
   {

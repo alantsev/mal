@@ -545,6 +545,44 @@ private:
 };
 
 ///////////////////////////////
+class ast_node_macro_call : public ast_node_base <node_type_enum::MACRO_CALL>
+{
+public:
+  ast_node_macro_call (ast_node::ptr node)
+    : m_callable_node (node)
+  {
+    m_callable_node->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
+  }
+
+  std::string to_string (bool print_readable) const override
+  {
+    return "#macro-call-" + m_callable_node->to_string ();
+  }
+
+  bool operator == (const ast_node& rp) const override
+  {
+    if (!IS_VALID_TYPE (rp.type ()))
+      return false;
+
+    return *m_callable_node == *rp.as<ast_node_macro_call> ()->m_callable_node;
+  }
+
+  uint32_t hash () const override
+  {
+    return m_callable_node->hash ();
+  }
+
+  ast_node::ptr callable_node () const 
+  {
+    return m_callable_node;
+  }
+
+private:
+  //
+  ast_node::ptr m_callable_node;
+};
+
+///////////////////////////////
 class ast_node_hashmap : public ast_node_callable
 {
 public:
