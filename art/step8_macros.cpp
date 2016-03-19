@@ -118,7 +118,7 @@ handle_quasiquote_impl (ast_node::ptr node, environment::ptr a_env)
         for (size_t c = 0, ce = splicedList->size (); c < ce; ++c)
         {
           auto && cv = (*splicedList) [c];
-          argvBuilder.add_node (mapFn (cv));
+          argvBuilder.add_node (cv);
         }
 
         continue;

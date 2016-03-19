@@ -384,10 +384,10 @@ builtin_nth (const call_arguments& args)
     raise<mal_exception_eval_invalid_arg> ();
 
   auto l = args[0]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
-  auto n = args[1]->as_or_throw<ast_node_int, mal_exception_eval_not_int> ()->value ();
+  auto n = arg_to_int (args, 1);
 
   if (n < 0 || n >= l->size ())
-    return ast_node::nil_node;
+    raise<mal_exception_eval_invalid_arg> ("index out of bounds");
 
   return (*l) [n];
 }
@@ -400,7 +400,11 @@ builtin_first (const call_arguments& args)
   if (args_size != 1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  auto l = args[0]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+  auto first = args[0];
+  if (first == ast_node::nil_node)
+    return ast_node::nil_node;
+
+  auto l = first->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
 
   if (l->empty ())
     return ast_node::nil_node;
@@ -416,15 +420,21 @@ builtin_rest (const call_arguments& args)
   if (args_size != 1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  auto l = args[0]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
-  const auto lSize = l->size ();
-
   ast_builder argvBuilder;
   argvBuilder.open_list ();
-  for (size_t i = 1; i < lSize; ++i)
+
+  auto first = args[0];
+  if (first != ast_node::nil_node)
   {
-    argvBuilder.add_node ((*l) [i]);
+    auto l = first->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+    const auto lSize = l->size ();
+
+    for (size_t i = 1; i < lSize; ++i)
+    {
+      argvBuilder.add_node ((*l) [i]);
+    }
   }
+
   argvBuilder.close_list ();
   return argvBuilder.build ();
 }

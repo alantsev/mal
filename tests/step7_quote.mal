@@ -148,3 +148,8 @@ b
 ;;; TODO: fix this
 ;;;;=>[1 1 "b" "d" 3]
 
+;; Testing splice-unquote with vectors
+`(~@(list [1] ))
+;=>([1])
+
+
