@@ -709,3 +709,15 @@ private:
   std::string m_picewise_string;
 };
 
+namespace mal
+{
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_list> 
+  make_list () 
+  {
+    return std::make_shared<ast_node_list> ();
+  }
+
+}
+
+

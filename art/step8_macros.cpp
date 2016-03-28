@@ -95,8 +95,7 @@ handle_quasiquote_impl (ast_node::ptr node, environment::ptr a_env)
     return EVAL (newNode, newEnv);
   };
 
-  ast_builder argvBuilder;
-  argvBuilder.open_list ();
+  auto retVal = mal::make_list ();
   for (size_t i = 0; i < nodeListSize; ++i)
   {
     auto && v = (*nodeList) [i];
@@ -118,7 +117,7 @@ handle_quasiquote_impl (ast_node::ptr node, environment::ptr a_env)
         for (size_t c = 0, ce = splicedList->size (); c < ce; ++c)
         {
           auto && cv = (*splicedList) [c];
-          argvBuilder.add_node (cv);
+          retVal->add_child (cv);
         }
 
         continue;
@@ -126,10 +125,8 @@ handle_quasiquote_impl (ast_node::ptr node, environment::ptr a_env)
     }
 
     // or add 
-    argvBuilder.add_node (mapFn (v));
+    retVal->add_child (mapFn (v));
   }
-  argvBuilder.close_list ();
-  auto retVal = argvBuilder.build ();
 
   return tco {nullptr, nullptr, retVal};
 };
@@ -565,14 +562,12 @@ main(int argc, char** argv)
   env->set ("eval", std::make_shared<ast_node_callable_builtin<decltype(evalFn)>> ("eval", evalFn));
 
   // argv
-  ast_builder argvBuilder;
-  argvBuilder.open_list ();
+  auto argvList = mal::make_list ();
   for (size_t i = 1; i < argc; ++i)
   {
-    argvBuilder.add_node (READ (argv [i]));
+    argvList->add_child (READ (argv [i]));
   }
-  argvBuilder.close_list ();
-  env->set ("*ARGV*", argvBuilder.build ());
+  env->set ("*ARGV*", argvList);
 
   // MAL
   // define not function

@@ -94,7 +94,7 @@ builtin_list (const call_arguments& args)
 {
   const auto args_size = args.size ();
 
-  auto retVal = std::make_shared<ast_node_list> ();
+  auto retVal = mal::make_list ();
   for (size_t i = 0; i < args_size; ++i)
     retVal->add_child (args[i]);
 
@@ -343,16 +343,14 @@ builtin_cons (const call_arguments& args)
   if (args_size !=  2)
     raise<mal_exception_eval_invalid_arg> ();
 
-  ast_builder argvBuilder;
-  argvBuilder.open_list ();
-  argvBuilder.add_node (args [0]);
+  auto retVal = mal::make_list ();
+  retVal->add_child (args [0]);
   auto l = args[1]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
   for (size_t j = 0, je = l->size (); j < je; ++j)
   {
-    argvBuilder.add_node ((*l) [j]);
+    retVal->add_child ((*l) [j]);
   }
-  argvBuilder.close_list ();
-  return argvBuilder.build ();
+  return retVal;
 }
 
 ///////////////////////////////
@@ -361,18 +359,16 @@ builtin_concat (const call_arguments& args)
 {
   const auto args_size = args.size ();
 
-  ast_builder argvBuilder;
-  argvBuilder.open_list ();
+  auto retVal = mal::make_list ();
   for (size_t i = 0; i < args_size; ++i)
   {
     auto l = args[i]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
     for (size_t j = 0, je = l->size (); j < je; ++j)
     {
-      argvBuilder.add_node ((*l) [j]);
+      retVal->add_child ((*l) [j]);
     }
   }
-  argvBuilder.close_list ();
-  return argvBuilder.build ();
+  return retVal;
 }
 
 ///////////////////////////////
@@ -420,9 +416,7 @@ builtin_rest (const call_arguments& args)
   if (args_size != 1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  ast_builder argvBuilder;
-  argvBuilder.open_list ();
-
+  auto retVal = mal::make_list ();
   auto first = args[0];
   if (first != ast_node::nil_node)
   {
@@ -431,12 +425,11 @@ builtin_rest (const call_arguments& args)
 
     for (size_t i = 1; i < lSize; ++i)
     {
-      argvBuilder.add_node ((*l) [i]);
+      retVal->add_child ((*l) [i]);
     }
   }
 
-  argvBuilder.close_list ();
-  return argvBuilder.build ();
+  return retVal;
 }
 
 } // end of anonymous namespace

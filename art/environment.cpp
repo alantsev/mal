@@ -26,7 +26,7 @@ environment::environment (hide_me, const ast_node_container_base& binds, const c
     if (symbol == "&")
       raise<mal_exception_eval_invalid_arg> ();
 
-    auto list = std::make_shared<ast_node_list> ();
+    auto list = mal::make_list ();
     for (size_t i = bind_index - 1, e = exprs.size (); i < e; ++i)
     {
       list->add_child (exprs[i]);
