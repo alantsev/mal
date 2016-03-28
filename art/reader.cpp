@@ -1,6 +1,6 @@
 #include "MAL.h"
 #include "ast.h"
-#include "ast_details.h"
+#include "ast_node_builder.h"
 #include "exceptions.h"
 
 #include <string>
