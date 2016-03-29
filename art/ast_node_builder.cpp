@@ -12,10 +12,10 @@ ast_builder::ast_builder ()
 ast_builder&
 ast_builder::open_list ()
 {
-  std::shared_ptr<ast_node_list> child { new ast_node_list {} };
+  auto child = mal::make_list ();
   ast_node_list* child_ref = child.get ();
 
-  m_current_stack.back ()->add_child (child);
+  back_node ()->add_child (child);
   m_current_stack.push_back (child_ref);
   return *this;
 }
@@ -24,7 +24,7 @@ ast_builder::open_list ()
 ast_builder& 
 ast_builder::close_list ()
 {
-  m_current_stack.back ()->as_or_throw<ast_node_list, mal_exception_parse_error> ();
+  back_node ()->as_or_throw<ast_node_list, mal_exception_parse_error> ();
   m_current_stack.pop_back ();
   if (m_current_stack.size () == 0) 
     raise<mal_exception_parse_error> ();
@@ -36,10 +36,10 @@ ast_builder::close_list ()
 ast_builder&
 ast_builder::open_vector ()
 {
-  std::shared_ptr<ast_node_vector> child { new ast_node_vector {} };
+  auto child = mal::make_vector ();
   ast_node_vector* child_ref = child.get ();
 
-  m_current_stack.back ()->add_child (child);
+  back_node ()->add_child (child);
   m_current_stack.push_back (child_ref);
   return *this;
 }
@@ -48,7 +48,7 @@ ast_builder::open_vector ()
 ast_builder& 
 ast_builder::close_vector ()
 {
-  m_current_stack.back ()->as_or_throw<ast_node_vector, mal_exception_parse_error> ();
+  back_node ()->as_or_throw<ast_node_vector, mal_exception_parse_error> ();
   m_current_stack.pop_back ();
   if (m_current_stack.size () == 0) 
     raise<mal_exception_parse_error> ();
@@ -61,7 +61,7 @@ ast_builder&
 ast_builder::add_symbol (std::string value)
 {
   ast_node::ptr child { new ast_node_symbol {std::move (value)} };
-  m_current_stack.back ()->add_child (child);
+  back_node ()->add_child (child);
   return *this;
 }
 
@@ -70,7 +70,7 @@ ast_builder&
 ast_builder::add_keyword (std::string keyword)
 {
   ast_node::ptr child { new ast_node_keyword {std::move (keyword)} };
-  m_current_stack.back ()->add_child (child);
+  back_node ()->add_child (child);
   return *this;
 }
 
@@ -79,7 +79,7 @@ ast_builder&
 ast_builder::add_int (int value)
 {
   ast_node::ptr child { new ast_node_int { value } };
-  m_current_stack.back ()->add_child (child);
+  back_node ()->add_child (child);
   return *this;
 }
 
@@ -87,7 +87,7 @@ ast_builder::add_int (int value)
 ast_builder&
 ast_builder::add_bool (bool value)
 {
-  m_current_stack.back ()->add_child (value ? ast_node::true_node : ast_node::false_node);
+  back_node ()->add_child (value ? ast_node::true_node : ast_node::false_node);
   return *this;
 }
 
@@ -95,7 +95,7 @@ ast_builder::add_bool (bool value)
 ast_builder&
 ast_builder::add_nil ()
 {
-  m_current_stack.back ()->add_child (ast_node::nil_node);
+  back_node ()->add_child (ast_node::nil_node);
   return *this;
 }
 
@@ -103,7 +103,7 @@ ast_builder::add_nil ()
 ast_builder&
 ast_builder::add_node (ast_node::ptr node)
 {
-  m_current_stack.back ()->add_child (node);
+  back_node ()->add_child (node);
   return *this;
 }
 
@@ -112,7 +112,7 @@ ast_builder&
 ast_builder::add_string (std::string str)
 {
   ast_node::ptr child { new ast_node_string {std::move (str)} };
-  m_current_stack.back ()->add_child (child);
+  back_node ()->add_child (child);
   return *this;
 }
 
@@ -144,7 +144,11 @@ ast_builder::finish_string ()
 ast_builder&
 ast_builder::open_hashmap ()
 {
-  // FIXME - 
+  auto child = mal::make_ht_list ();
+  auto child_ref = child.get ();
+
+  back_node ()->add_child (child);
+  m_current_stack.push_back (child_ref);
   return *this;
 }
 
@@ -152,7 +156,14 @@ ast_builder::open_hashmap ()
 ast_builder&
 ast_builder::close_hashmap ()
 {
-  // FIXME - 
+  back_node ()->as_or_throw<ast_node_ht_list, mal_exception_parse_error> ();
+  if (back_node ()->size () % 2 != 0) 
+    raise<mal_exception_parse_error> ("odd number of entries for hashmap: " + back_node ()->to_string ());
+
+  m_current_stack.pop_back ();
+  if (m_current_stack.size () == 0) 
+    raise<mal_exception_parse_error> ();
+
   return *this;
 }
 

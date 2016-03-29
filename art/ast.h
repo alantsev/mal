@@ -28,6 +28,7 @@ enum class node_type_enum
   CALLABLE_BUILTIN,
   CALLABLE_LAMBDA,
   MACRO_CALL,
+  HT_LIST, // for internal use only
   NODE_TYPE_COUNT
 };
 

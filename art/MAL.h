@@ -1,9 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <cstdlib>
 
 ///////////////////////////////
 #define UNUSED(x) ((void) x)
+#define UNREACHABLE() abort();
+
 
 ///////////////////////////////
 class environment;

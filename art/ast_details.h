@@ -266,7 +266,6 @@ public:
 };
 
 ///////////////////////////////
-// FIXME - make me just class
 class ast_node_container_base : public ast_node
 {
 public:
@@ -378,6 +377,11 @@ public:
     return NODE_TYPE;
   }
 
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
+  {
+    return NODE_TYPE == t;
+  }
+
 protected:
   mutable_ptr clone () const override
   {
@@ -397,6 +401,36 @@ class ast_node_list : public ast_node_container_crtp <node_type_enum::LIST, ast_
 public:
   using ast_node::to_string;
   std::string to_string (bool print_readable) const override;
+
+  uint32_t hash () const override
+  {
+    uint32_t retVal = 1003322101;
+    for (auto && p : m_children)
+    {
+      retVal = (retVal + p->hash ()) * 291675463 + 1003322101;
+    }
+    return retVal;
+  }
+};
+
+///////////////////////////////
+class ast_node_ht_list : public ast_node_container_crtp <node_type_enum::HT_LIST, ast_node_ht_list>
+{
+public:
+  std::string to_string (bool print_readable) const override
+  {
+    std::string retVal = "{";
+    for (size_t i = 0, e = m_children.size (); i < e; ++i)
+    {
+      auto &&p = m_children [i];
+      if (i != 0)
+        retVal += " ";
+      retVal += p->to_string (print_readable);
+    }
+    retVal += "}";
+
+    return retVal;
+  }
 
   uint32_t hash () const override
   {
@@ -500,6 +534,11 @@ public:
     return node_type_enum::CALLABLE_BUILTIN;
   }
 
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
+  {
+    return node_type_enum::CALLABLE_BUILTIN == t;
+  }
+
 private:
   builtin_fn m_fn;
 };
@@ -535,6 +574,11 @@ public:
   uint32_t hash () const override
   {
     return (m_binds->hash () * 1622000167 + 582512737) * m_ast->hash () + 2152752083;
+  }
+
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
+  {
+    return node_type_enum::CALLABLE_LAMBDA == t;
   }
 
 private:
@@ -596,7 +640,7 @@ public:
     for (auto && p : m_hashtable)
     {
       if (i != 0)
-        retVal += " ";
+        retVal += ", ";
       retVal += p.first->to_string (print_readable) + " " + p.second->to_string (print_readable);
       ++i;
     }
@@ -640,6 +684,16 @@ public:
     return retVal;
   }
 
+  void insert (ast_node::ptr key, ast_node::ptr value)
+  {
+    m_hashtable [key] = value;
+  }
+
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
+  {
+    return node_type_enum::HASHMAP == t;
+  }
+
 private:
   struct ast_node_hash
   {
@@ -669,6 +723,38 @@ namespace mal
   make_list () 
   {
     return std::make_shared<ast_node_list> ();
+  }
+
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_vector> 
+  make_vector () 
+  {
+    return std::make_shared<ast_node_vector> ();
+  }
+
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_ht_list> 
+  make_ht_list () 
+  {
+    return std::make_shared<ast_node_ht_list> ();
+  }
+
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_hashmap>
+  make_hashmap (const ast_node_container_base* seq)
+  {
+    auto retVal = std::make_shared<ast_node_hashmap> ();
+
+    const size_t count = seq->size ();
+    if (count % 2 != 0)
+      raise<mal_exception_parse_error> ("odd number of elements in hashmap");
+
+    for (size_t i = 0; i < count; i += 2)
+    {
+      retVal->insert ((*seq)[i], (*seq)[i + 1]);
+    }
+
+    return retVal;
   }
 
 }

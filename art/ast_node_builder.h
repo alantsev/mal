@@ -45,8 +45,15 @@ public:
   }
 
 private:
+  //
+  ast_node_container_base* back_node ()
+  {
+    return m_current_stack.back ();
+  }
+
   std::unique_ptr<ast_node_list> m_meta_root;
   std::deque<ast_node_container_base*> m_current_stack;
+
   std::string m_picewise_string;
 };
 

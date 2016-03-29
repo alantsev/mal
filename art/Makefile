@@ -11,7 +11,7 @@ LIBPATHS=-L$(READLINE)/lib
 CXXFLAGS=-O0 $(INCPATHS) -Wall -std=c++14
 LDFLAGS=-O0 $(LIBPATHS) -L. -lreadline -lhistory
 
-LIBSOURCES=ast.cpp ast_details.cpp reader.cpp environment.cpp arena.cpp core.cpp ast_node_bulider.cpp
+LIBSOURCES=ast.cpp ast_details.cpp reader.cpp environment.cpp arena.cpp core.cpp ast_node_builder.cpp
 LIBOBJS=$(LIBSOURCES:%.cpp=%.o)
 
 MAINS=$(wildcard step*.cpp)

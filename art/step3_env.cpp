@@ -184,6 +184,18 @@ eval_ast (ast tree, environment::ptr a_env)
       // not as_or_throw - we know the type
       return fn_handle_container (tree->as<ast_node_vector> ());
     }
+  case node_type_enum::HT_LIST:
+    {
+      // not as_or_throw - we know the type
+      const auto& node_container = tree->as<ast_node_ht_list> ();
+      // TODO - add here optimization to do not clone underlying node if the current pointer is unique!
+      auto evaledList = node_container->map (
+        [&a_env] (ast_node::ptr v) { 
+          return EVAL (v, a_env);
+        });
+      ast_node::ptr retVal = mal::make_hashmap (evaledList->as<ast_node_ht_list> ());
+      return retVal;
+    }
 
   default:
     break;

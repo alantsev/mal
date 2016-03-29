@@ -345,7 +345,7 @@ builtin_cons (const call_arguments& args)
 
   auto retVal = mal::make_list ();
   retVal->add_child (args [0]);
-  auto l = args[1]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+  auto l = args[1]->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
   for (size_t j = 0, je = l->size (); j < je; ++j)
   {
     retVal->add_child ((*l) [j]);
@@ -362,7 +362,7 @@ builtin_concat (const call_arguments& args)
   auto retVal = mal::make_list ();
   for (size_t i = 0; i < args_size; ++i)
   {
-    auto l = args[i]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+    auto l = args[i]->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
     for (size_t j = 0, je = l->size (); j < je; ++j)
     {
       retVal->add_child ((*l) [j]);
@@ -379,7 +379,7 @@ builtin_nth (const call_arguments& args)
   if (args_size !=  2)
     raise<mal_exception_eval_invalid_arg> ();
 
-  auto l = args[0]->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+  auto l = args[0]->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
   auto n = arg_to_int (args, 1);
 
   if (n < 0 || n >= l->size ())
@@ -400,7 +400,7 @@ builtin_first (const call_arguments& args)
   if (first == ast_node::nil_node)
     return ast_node::nil_node;
 
-  auto l = first->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+  auto l = first->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
 
   if (l->empty ())
     return ast_node::nil_node;
@@ -420,7 +420,7 @@ builtin_rest (const call_arguments& args)
   auto first = args[0];
   if (first != ast_node::nil_node)
   {
-    auto l = first->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
+    auto l = first->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
     const auto lSize = l->size ();
 
     for (size_t i = 1; i < lSize; ++i)
