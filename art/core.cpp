@@ -432,6 +432,18 @@ builtin_rest (const call_arguments& args)
   return retVal;
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_throw (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  throw args[0];
+  return ast_node::nil_node;
+}
+
 } // end of anonymous namespace
 
 ///////////////////////////////
@@ -472,6 +484,8 @@ core::core (environment::ptr root_env)
   env_add_builtin ("nth", builtin_nth);
   env_add_builtin ("first", builtin_first);
   env_add_builtin ("rest", builtin_rest);
+
+  env_add_builtin ("throw", builtin_throw);
 
   for (auto&& c : content ())
   {
