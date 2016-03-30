@@ -694,6 +694,13 @@ public:
     return node_type_enum::HASHMAP == t;
   }
 
+  std::shared_ptr<ast_node_hashmap> clone () const
+  {
+    auto retVal = std::make_shared<ast_node_hashmap> ();
+    retVal->m_hashtable = m_hashtable;
+    return retVal;
+  }
+
 private:
   struct ast_node_hash
   {
@@ -757,6 +764,37 @@ namespace mal
     return retVal;
   }
 
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_hashmap>
+  make_hashmap (const call_arguments& args)
+  {
+    auto retVal = std::make_shared<ast_node_hashmap> ();
+
+    const size_t count = args.size ();
+    if (count % 2 != 0)
+      raise<mal_exception_parse_error> ("odd number of elements in hashmap");
+
+    for (size_t i = 0; i < count; i += 2)
+    {
+      retVal->insert (args[i], args[i + 1]);
+    }
+
+    return retVal;
+  }
+
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_symbol> 
+  make_symbol (std::string value) 
+  {
+    return std::make_shared<ast_node_symbol> (std::move (value));
+  }
+
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_keyword> 
+  make_keyword (std::string value) 
+  {
+    return std::make_shared<ast_node_keyword> (std::move (value));
+  }
 }
 
 

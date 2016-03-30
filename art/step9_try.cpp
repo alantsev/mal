@@ -692,6 +692,13 @@ main(int argc, char** argv)
   EVAL (READ ("(defmacro! cond (fn* (& xs) (if (> (count xs) 0) (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw \"odd number of forms to cond\")) (cons 'cond (rest (rest xs)))))))"), env);
   // or
   EVAL (READ ("(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) `(let* (or_FIXME ~(first xs)) (if or_FIXME or_FIXME (or ~@(rest xs))))))))"), env);
+  // nil?
+  EVAL (READ ("(def! nil? (fn* (a) (= a nil)))"), env);
+  // true?
+  EVAL (READ ("(def! true? (fn* (a) (= a true)))"), env);
+  // false?
+  EVAL (READ ("(def! false? (fn* (a) (= a false)))"), env);
+
 
 
   if (argc < 2)

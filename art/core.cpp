@@ -444,6 +444,92 @@ builtin_throw (const call_arguments& args)
   return ast_node::nil_node;
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_is_symbol (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return ast_node_from_bool (args[0]->type () == node_type_enum::SYMBOL);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_symbol (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return mal::make_symbol (args[0]->as_or_throw<ast_node_string, mal_exception_eval_not_string> ()->value ());
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_keyword (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return mal::make_keyword (":" + args[0]->as_or_throw<ast_node_string, mal_exception_eval_not_string> ()->value ());
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_is_keyword (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return ast_node_from_bool (args[0]->type () == node_type_enum::KEYWORD);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_vector (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+
+  auto retVal = mal::make_vector ();
+  for (size_t i = 0; i < args_size; ++i)
+    retVal->add_child (args[i]);
+
+  return retVal;
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_is_vector (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return ast_node_from_bool (args[0]->type () == node_type_enum::VECTOR);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_hashmap (const call_arguments& args)
+{
+  return mal::make_hashmap (args);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_is_hashmap (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return ast_node_from_bool (args[0]->type () == node_type_enum::HASHMAP);
+}
+
 } // end of anonymous namespace
 
 ///////////////////////////////
@@ -486,6 +572,14 @@ core::core (environment::ptr root_env)
   env_add_builtin ("rest", builtin_rest);
 
   env_add_builtin ("throw", builtin_throw);
+  env_add_builtin ("symbol?", builtin_is_symbol);
+  env_add_builtin ("symbol", builtin_symbol);
+  env_add_builtin ("keyword", builtin_keyword);
+  env_add_builtin ("keyword?", builtin_is_keyword);
+  env_add_builtin ("vector", builtin_vector);
+  env_add_builtin ("vector?", builtin_is_vector);
+  env_add_builtin ("hash-map", builtin_hashmap);
+  env_add_builtin ("map?", builtin_is_hashmap);
 
   for (auto&& c : content ())
   {
