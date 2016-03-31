@@ -530,6 +530,120 @@ builtin_is_hashmap (const call_arguments& args)
   return ast_node_from_bool (args[0]->type () == node_type_enum::HASHMAP);
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_assoc (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size <  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto retVal = args[0]->as_or_throw<ast_node_hashmap, mal_exception_eval_not_hashmap> ()->clone ();
+
+  if (args_size % 2 == 0)
+    raise<mal_exception_parse_error> ("odd number of elements in hashmap");
+
+  for (size_t i = 1; i < args_size; i += 2)
+  {
+    retVal->insert (args[i], args[i + 1]);
+  }
+
+  return retVal;
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_dissoc (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size < 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto retVal = args[0]->as_or_throw<ast_node_hashmap, mal_exception_eval_not_hashmap> ()->clone ();
+
+  for (size_t i = 1; i < args_size; ++i)
+  {
+    retVal->erase (args[i]);
+  }
+
+  return retVal;
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_get (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto hashmap = args[0];
+  if (hashmap->type () == node_type_enum::NIL)
+    return ast_node::nil_node;
+
+  return hashmap->as_or_throw<ast_node_hashmap, mal_exception_eval_not_hashmap> ()->get (args[1]);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_is_contains (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto hashmap = args[0];
+  if (hashmap->type () == node_type_enum::NIL)
+    return ast_node::false_node;
+
+  auto hashmap_casted = hashmap->as_or_throw<ast_node_hashmap, mal_exception_eval_not_hashmap> ();
+
+  return ast_node_from_bool (hashmap_casted->has (args[1]));
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_keys (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto hashmap = args[0]->as_or_throw<ast_node_hashmap, mal_exception_eval_not_hashmap> ();
+  auto retVal = mal::make_list ();
+
+  hashmap->for_each ([&] (ast_node::ptr k, ast_node::ptr) { retVal->add_child (k); });
+  return retVal;
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_vals (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto hashmap = args[0]->as_or_throw<ast_node_hashmap, mal_exception_eval_not_hashmap> ();
+  auto retVal = mal::make_list ();
+
+  hashmap->for_each ([&] (ast_node::ptr, ast_node::ptr v) { retVal->add_child (v); });
+  return retVal;
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_is_sequential (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto nodeType = args[0]->type ();
+  const bool isSeq = nodeType == node_type_enum::LIST || nodeType == node_type_enum::VECTOR;
+  return ast_node_from_bool (isSeq);
+}
+
 } // end of anonymous namespace
 
 ///////////////////////////////
@@ -580,6 +694,14 @@ core::core (environment::ptr root_env)
   env_add_builtin ("vector?", builtin_is_vector);
   env_add_builtin ("hash-map", builtin_hashmap);
   env_add_builtin ("map?", builtin_is_hashmap);
+  env_add_builtin ("assoc", builtin_assoc);
+  env_add_builtin ("dissoc", builtin_dissoc);
+  env_add_builtin ("get", builtin_get);
+  env_add_builtin ("contains?", builtin_is_contains);
+  env_add_builtin ("keys", builtin_keys);
+  env_add_builtin ("vals", builtin_vals);
+  env_add_builtin ("vals", builtin_vals);
+  env_add_builtin ("sequential?", builtin_is_sequential);
 
   for (auto&& c : content ())
   {

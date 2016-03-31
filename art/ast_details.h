@@ -689,6 +689,22 @@ public:
     m_hashtable [key] = value;
   }
 
+  void erase (ast_node::ptr key)
+  {
+    m_hashtable.erase (key);
+  }
+
+  ast_node::ptr get (ast_node::ptr key) const
+  {
+    auto it = m_hashtable.find (key);
+    return it != m_hashtable.end () ? it->second : ast_node::nil_node;
+  }
+
+  bool has (ast_node::ptr key) const
+  {
+    return m_hashtable.count (key) != 0;
+  }
+
   static constexpr bool IS_VALID_TYPE (node_type_enum t)
   {
     return node_type_enum::HASHMAP == t;
@@ -699,6 +715,15 @@ public:
     auto retVal = std::make_shared<ast_node_hashmap> ();
     retVal->m_hashtable = m_hashtable;
     return retVal;
+  }
+
+  template <typename Visitor>
+  void for_each (Visitor && v) const
+  {
+    for (auto && p : m_hashtable)
+    {
+      v (p.first, p.second);
+    }
   }
 
 private:
