@@ -114,6 +114,12 @@ inline bool equals (const ast_node& left, const ast_node& right)
 }
 
 ///////////////////////////////
+inline bool operator != (const ast_node& lhs, const ast_node& rhs)
+{
+  return ! (lhs == rhs);
+}
+
+///////////////////////////////
 class ast
 {
 public:

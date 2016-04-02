@@ -383,6 +383,12 @@ EVAL (ast tree, environment::ptr a_env)
       {
         retVal = EVAL (eval_part, a_env);
       }
+      catch (const mal_exception& ex)
+      {
+        auto catch_env = environment::make (a_env);
+        catch_env->set (bind_ex_symbol->symbol (), mal::make_string (ex.what ()));
+        retVal = EVAL (catch_eval_part, catch_env);
+      }
       catch (const ast_node::ptr& ex)
       {
         auto catch_env = environment::make (a_env);
@@ -537,37 +543,13 @@ execReplSafe (TFn&& fn)
   {
     fn ();
   }
-  catch (const mal_exception_parse_error& ex)
+  catch (const mal_exception_stop&)
   {
-    printline (std::string ("parse error: ") + ex.what ());
+    throw;
   }
-  catch (const mal_exception_eval_not_callable& ex)
+  catch (const mal_exception& ex)
   {
-    printline (std::string ("not callable: ") + ex.what ());
-  }
-  catch (const mal_exception_eval_not_int& ex)
-  {
-    printline (std::string ("not int: ") + ex.what ());
-  }
-  catch (const mal_exception_eval_not_atom& ex)
-  {
-    printline (std::string ("not atom: ") + ex.what ());
-  }
-  catch (const mal_exception_eval_not_list& ex)
-  {
-    printline (std::string ("not list: ") + ex.what ());
-  }
-  catch (const mal_exception_eval_not_symbol& ex)
-  {
-    printline (std::string ("not symbol: ") + ex.what ());
-  }
-  catch (const mal_exception_eval_invalid_arg& ex)
-  {
-    printline (std::string ("invalid arguments: ") + ex.what ());
-  }
-  catch (const mal_exception_eval_no_symbol& ex)
-  {
-    printline (std::string ("no symbol: ") + ex.what ());
+    printline (ex.what ());
   }
 }
 
@@ -669,7 +651,13 @@ main(int argc, char** argv)
       return EVAL (tree, a_env);
     };
 
-    return last_list->map (fn);
+    auto retVal = mal::make_list ();
+    for (size_t i = 0, e = last_list->size (); i < e; ++i)
+    {
+      retVal->add_child (fn ((*last_list)[i]));
+    }
+
+    return retVal;
   };
   env->set ("map", std::make_shared<ast_node_callable_builtin<decltype(mapFn)>> ("map", mapFn));
 

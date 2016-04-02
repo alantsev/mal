@@ -22,18 +22,35 @@ enum class mal_exception_enum : uint32_t
 template <typename T> void raise (std::string message = "");
 
 ///////////////////////////////
-template <mal_exception_enum t>
-class mal_exception_impl
+class mal_exception
 {
-friend void raise<mal_exception_impl<t>> (std::string message);
 public:
   const std::string& what () const 
   {
     return m_message;
   }
+
+protected:
+  mal_exception (std::string message = "")
+    : m_message (std::move (message))
+  {}
+  ~mal_exception () = default;
+
+private:
+  std::string m_message;
+};
+
+///////////////////////////////
+template <mal_exception_enum t>
+class mal_exception_impl : public mal_exception
+{
+friend void raise<mal_exception_impl<t>> (std::string message);
+public:
+  ~mal_exception_impl () = default;
+
 private:
   mal_exception_impl (std::string message = "")
-    : m_message (std::move (message))
+    : mal_exception (std::move (message))
   {}
 
   std::string m_message;

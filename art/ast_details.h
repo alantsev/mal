@@ -306,6 +306,17 @@ public:
     return (t == node_type_enum::LIST) || (t == node_type_enum::VECTOR);
   }
 
+  uint32_t hash () const override
+  {
+    uint32_t retVal = 1722983309;
+    for (auto && p : m_children)
+    {
+      retVal = (retVal + p->hash ()) * 824928359 + 1722983309;
+    }
+    return retVal;
+  }
+
+
   bool operator == (const ast_node& rp) const override
   {
     if (!IS_VALID_TYPE (rp.type ()))
@@ -377,11 +388,6 @@ public:
     return NODE_TYPE;
   }
 
-  static constexpr bool IS_VALID_TYPE (node_type_enum t)
-  {
-    return NODE_TYPE == t;
-  }
-
 protected:
   mutable_ptr clone () const override
   {
@@ -401,16 +407,6 @@ class ast_node_list : public ast_node_container_crtp <node_type_enum::LIST, ast_
 public:
   using ast_node::to_string;
   std::string to_string (bool print_readable) const override;
-
-  uint32_t hash () const override
-  {
-    uint32_t retVal = 1003322101;
-    for (auto && p : m_children)
-    {
-      retVal = (retVal + p->hash ()) * 291675463 + 1003322101;
-    }
-    return retVal;
-  }
 };
 
 ///////////////////////////////
@@ -441,6 +437,12 @@ public:
     }
     return retVal;
   }
+
+  static constexpr bool IS_VALID_TYPE (node_type_enum t)
+  {
+    return node_type_enum::HT_LIST == t;
+  }
+
 };
 
 ///////////////////////////////
@@ -448,16 +450,6 @@ class ast_node_vector : public ast_node_container_crtp <node_type_enum::VECTOR, 
 {
 public:
   std::string to_string (bool print_readably) const override;
-
-  uint32_t hash () const override
-  {
-    uint32_t retVal = 1722983309;
-    for (auto && p : m_children)
-    {
-      retVal = (retVal + p->hash ()) * 824928359 + 1722983309;
-    }
-    return retVal;
-  }
 };
 
 ///////////////////////////////
@@ -640,7 +632,7 @@ public:
     for (auto && p : m_hashtable)
     {
       if (i != 0)
-        retVal += ", ";
+        retVal += " ";
       retVal += p.first->to_string (print_readable) + " " + p.second->to_string (print_readable);
       ++i;
     }
@@ -665,7 +657,20 @@ public:
       return false;
 
     auto rp_hashmap = rp.as<ast_node_hashmap> ();
-    return m_hashtable == rp_hashmap->m_hashtable;
+
+    if (m_hashtable.size () != rp_hashmap->m_hashtable.size ())
+      return false;
+
+    for (auto it1 = m_hashtable.begin(), e = m_hashtable.end (); it1 != e; ++it1)
+    {
+      auto it2 = rp_hashmap->m_hashtable.find (it1->first);
+      if (it2 == rp_hashmap->m_hashtable.end ())
+        return false;
+
+      if (*it1->second != *it2->second)
+        return false;
+    }
+    return true;
   }
 
   node_type_enum type () const override
@@ -820,6 +825,14 @@ namespace mal
   {
     return std::make_shared<ast_node_keyword> (std::move (value));
   }
+
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_string> 
+  make_string (std::string value) 
+  {
+    return std::make_shared<ast_node_string> (std::move (value));
+  }
+
 }
 
 
