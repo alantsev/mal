@@ -100,7 +100,7 @@ private:
     if (from + 1 < to)
     {
       char *end;
-      int valInt = std::strtol (m_line.data () + from, &end, 10);
+      int64_t valInt = std::strtoll (m_line.data () + from, &end, 10);
       if (end == m_line.data () + to - 1)
       {
         m_builders.back ().add_int (valInt);

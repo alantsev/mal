@@ -76,7 +76,7 @@ ast_builder::add_keyword (std::string keyword)
 
 ///////////////////////////////
 ast_builder& 
-ast_builder::add_int (int value)
+ast_builder::add_int (int64_t value)
 {
   ast_node::ptr child { new ast_node_int { value } };
   back_node ()->add_child (child);

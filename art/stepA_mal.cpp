@@ -549,7 +549,7 @@ execReplSafe (TFn&& fn)
   }
   catch (const mal_exception& ex)
   {
-    printline (ex.what ());
+    printline ("error: " + ex.what ());
   }
 }
 

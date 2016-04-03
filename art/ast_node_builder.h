@@ -19,7 +19,7 @@ public:
 
   ast_builder& add_symbol (std::string);
   ast_builder& add_keyword (std::string);
-  ast_builder& add_int (int);
+  ast_builder& add_int (int64_t);
 
   ast_builder& add_bool (bool val);
   ast_builder& add_nil ();

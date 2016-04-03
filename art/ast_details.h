@@ -209,10 +209,10 @@ private:
 class ast_node_int : public ast_node_base <node_type_enum::INT>
 {
 public:
-  ast_node_int (int a_value);
+  ast_node_int (int64_t a_value);
 
   std::string to_string (bool print_readable) const override;
-  int value () const
+  int64_t value () const
   {
     return m_value;
   }
@@ -237,7 +237,7 @@ protected:
   }
 
 private:
-  int m_value;
+  int64_t m_value;
 };
 
 ///////////////////////////////
@@ -890,6 +890,12 @@ namespace mal
     return std::make_shared<ast_node_string> (std::move (value));
   }
 
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_int> 
+  make_int (int64_t value) 
+  {
+    return std::make_shared<ast_node_int> (value);
+  }
 }
 
 

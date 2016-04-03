@@ -57,7 +57,7 @@ ast_node_symbol::to_string (bool print_readable) const // override
 ///////////////////////////////
 /// ast_node_int class
 ///////////////////////////////
-ast_node_int::ast_node_int (int a_value)
+ast_node_int::ast_node_int (int64_t a_value)
   : m_value (a_value)
 {}
 

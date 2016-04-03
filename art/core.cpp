@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <streambuf>
+#include <chrono>
 
 namespace
 {
@@ -16,7 +17,7 @@ ast_node_from_bool (bool f)
 }
 
 ///////////////////////////////
-inline int
+inline int64_t
 arg_to_int (const call_arguments& args, size_t i)
 {
   return args[i]->as_or_throw<ast_node_int, mal_exception_eval_not_int> ()->value ();
@@ -42,7 +43,7 @@ builtin_plus (const call_arguments& args)
   if (args_size < 1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  int retVal = 0;
+  int64_t retVal = 0;
   for (size_t i = 0; i < args_size; ++i)
     retVal += arg_to_int(args, i);
 
@@ -57,7 +58,7 @@ builtin_minus (const call_arguments& args)
   if (args_size < 1 || args_size > 2)
     raise<mal_exception_eval_invalid_arg> ();
 
-  int retVal = (args_size == 1) ? -arg_to_int (args, 0) : arg_to_int (args, 0) - arg_to_int (args, 1);
+  int64_t retVal = (args_size == 1) ? -arg_to_int (args, 0) : arg_to_int (args, 0) - arg_to_int (args, 1);
   return std::make_shared<ast_node_int> (retVal);
 }
 
@@ -69,7 +70,7 @@ builtin_div (const call_arguments& args)
   if (args_size != 2)
     raise<mal_exception_eval_invalid_arg> ();
 
-  int retVal = arg_to_int(args, 0) / arg_to_int(args, 1);
+  int64_t retVal = arg_to_int(args, 0) / arg_to_int(args, 1);
   return std::make_shared<ast_node_int> (retVal);
 }
 
@@ -81,7 +82,7 @@ builtin_mul (const call_arguments& args)
   if (!(args_size > 0))
     raise<mal_exception_eval_invalid_arg> ();
 
-  int retVal = 1;
+  int64_t retVal = 1;
   for (size_t i = 0; i < args_size; ++i)
     retVal *= arg_to_int(args, i);
 
@@ -132,7 +133,7 @@ builtin_count (const call_arguments& args)
   if (args_size !=  1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  int count = 0;
+  int64_t count = 0;
   if (args[0]->type () != node_type_enum::NIL)
   {
     auto arg_list = args[0]->as_or_throw<ast_node_container_base, mal_exception_eval_not_list> ();
@@ -158,28 +159,28 @@ builtin_compare (const call_arguments& args)
 ast_node::ptr
 builtin_less (const call_arguments& args)
 {
-  return compare_int_impl (args, [](int first, int second) { return first < second; });
+  return compare_int_impl (args, [](int64_t first, int64_t second) { return first < second; });
 }
 
 ///////////////////////////////
 ast_node::ptr
 builtin_less_or_eq (const call_arguments& args)
 {
-  return compare_int_impl (args, [](int first, int second) { return first <= second; });
+  return compare_int_impl (args, [](int64_t first, int64_t second) { return first <= second; });
 }
 
 ///////////////////////////////
 ast_node::ptr
 builtin_greater (const call_arguments& args)
 {
-  return compare_int_impl (args, [](int first, int second) { return first > second; });
+  return compare_int_impl (args, [](int64_t first, int64_t second) { return first > second; });
 }
 
 ///////////////////////////////
 ast_node::ptr
 builtin_greater_or_eq (const call_arguments& args)
 {
-  return compare_int_impl (args, [](int first, int second) { return first >= second; });
+  return compare_int_impl (args, [](int64_t first, int64_t second) { return first >= second; });
 }
 
 ///////////////////////////////
@@ -664,11 +665,130 @@ builtin_with_meta (const call_arguments& args)
     raise<mal_exception_eval_invalid_arg> ();
 
   auto meta = args[1];
-  if (meta->type () != node_type_enum::HASHMAP)
-    raise<mal_exception_eval_invalid_arg> (meta->to_string ());
+//  if (meta->type () != node_type_enum::HASHMAP)
+//    raise<mal_exception_eval_invalid_arg> (meta->to_string ());
 
   return args[0]->clone_with_meta (meta);
 }
+
+///////////////////////////////
+ast_node::ptr
+builtin_timems (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 0)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+  return mal::make_int (ms.count ());
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_conj (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size < 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto firstSeq = args[0]->as_or_throw<ast_node_container_base, mal_exception_eval_invalid_arg> ();
+  switch (firstSeq->type ())
+  {
+    case node_type_enum::LIST:
+    {
+      auto retVal = mal::make_list ();
+      for (size_t i = args_size - 1; i > 0; --i)
+      {
+        retVal->add_child (args[i]);
+      }
+      for (size_t i = 0, e = firstSeq->size (); i < e; ++i)
+      {
+        retVal->add_child ((*firstSeq)[i]);
+      }
+      return retVal;
+    }
+    case node_type_enum::VECTOR:
+    {
+      auto retVal = mal::make_vector ();
+      for (size_t i = 0, e = firstSeq->size (); i < e; ++i)
+      {
+        retVal->add_child ((*firstSeq)[i]);
+      }
+      for (size_t i = 1; i < args_size; ++i)
+      {
+        retVal->add_child (args[i]);
+      }
+      return retVal;
+    }
+    default:
+      break;
+  }
+  return ast_node::nil_node;
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_is_string (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto nodeType = args[0]->type ();
+  return ast_node_from_bool (nodeType == node_type_enum::STRING);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_seq (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  switch (args[0]->type ())
+  {
+    case node_type_enum::LIST:
+    {
+      auto seq = args[0]->as<ast_node_container_base> ();
+      if (seq->size () == 0)
+        break;
+
+      return args [0];
+    }
+    case node_type_enum::VECTOR:
+    {
+      auto seq = args[0]->as<ast_node_container_base> ();
+      if (seq->size () == 0)
+        break;
+
+      auto retVal = mal::make_list ();
+      for (size_t i = 0, e = seq->size (); i < e; ++i)
+        retVal->add_child ((*seq)[i]);
+      return retVal;
+    }
+    case node_type_enum::STRING:
+    {
+      auto && seq = args[0]->as<ast_node_string> ()->value ();
+      if (seq.size () == 0)
+        break;
+
+      auto retVal = mal::make_list ();
+      for (auto && ch : seq)
+        retVal->add_child (mal::make_string ( std::string (1, ch) ));
+      return retVal;
+    }
+    case node_type_enum::NIL:
+    {
+      break;
+    }
+    default:
+      raise<mal_exception_eval_invalid_arg> ();
+      break;
+  }
+  return ast_node::nil_node;
+}
+
 
 } // end of anonymous namespace
 
@@ -731,6 +851,10 @@ core::core (environment::ptr root_env)
 
   env_add_builtin ("meta", builtin_meta);
   env_add_builtin ("with-meta", builtin_with_meta);
+  env_add_builtin ("time-ms", builtin_timems);
+  env_add_builtin ("conj", builtin_conj);
+  env_add_builtin ("string?", builtin_is_string);
+  env_add_builtin ("seq", builtin_seq);
 
   for (auto&& c : content ())
   {
