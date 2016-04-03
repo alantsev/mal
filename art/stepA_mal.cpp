@@ -697,11 +697,9 @@ main(int argc, char** argv)
   // load file
   EVAL (READ ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
   // swap!
-  EVAL (READ ("(def! swap! (fn* [swapAtom swapFn & swapArgs] (do (reset! swapAtom (eval (concat (list swapFn) (list (deref swapAtom)) swapArgs))) (deref swapAtom) ) ) )"), env);
+  EVAL (READ ("(defmacro! swap! (fn* [swapAtom swapFn & swapArgs] `(do (reset! ~swapAtom (~swapFn @~swapAtom ~@swapArgs) ) (deref ~swapAtom) ) ) )"), env);
   // cond
   EVAL (READ ("(defmacro! cond (fn* (& xs) (if (> (count xs) 0) (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw \"odd number of forms to cond\")) (cons 'cond (rest (rest xs)))))))"), env);
-  // or
-  EVAL (READ ("(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) `(let* (or_FIXME ~(first xs)) (if or_FIXME or_FIXME (or ~@(rest xs))))))))"), env);
   // nil?
   EVAL (READ ("(def! nil? (fn* (a) (= a nil)))"), env);
   // true?
@@ -709,10 +707,17 @@ main(int argc, char** argv)
   // false?
   EVAL (READ ("(def! false? (fn* (a) (= a false)))"), env);
   // *host-language*
-//  EVAL (READ ("(def! *host-language* \"art\""), env);
+  EVAL (READ ("(def! *host-language* \"AL C++\")"), env);
+  // gensym
+  EVAL (READ ("(def! *gensym-counter* (atom 0))"), env);
+  EVAL (READ ("(def! gensym (fn* [] (symbol (str \"G__\" (swap! *gensym-counter* (fn* [x] (+ 1 x)))))))"), env);
+  // or
+  EVAL (READ ("(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) (let* (condvar (gensym)) `(let* (~condvar ~(first xs)) (if ~condvar ~condvar (or ~@(rest xs)))))))))"), env);
+
 
   if (argc < 2)
   {
+    EVAL (READ ("(println (str \"Mal [\" *host-language* \"]\"))"), env);
     mainRepl (env);
   }
   else

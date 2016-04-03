@@ -58,6 +58,12 @@ public:
     return retVal;
   }
 
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_atom> (m_value);
+  }
+
 private:
   mutable ast_node::ptr m_value;
 };
@@ -85,6 +91,12 @@ public:
   uint32_t hash () const override
   {
     return std::hash<std::string> () (m_symbol);
+  }
+
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_symbol> (m_symbol);
   }
 
 private:
@@ -127,6 +139,12 @@ public:
   uint32_t hash () const override
   {
     return std::hash<std::string> () (m_value) * 547449787 + 1550872369;
+  }
+
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_string> (m_value);
   }
 
 private:
@@ -176,6 +194,12 @@ public:
     return std::hash<std::string> () (m_keyword) * 1965751841 + 311457019;
   }
 
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_keyword> (m_keyword);
+  }
+
 private:
   //
   std::string m_keyword;
@@ -204,6 +228,12 @@ public:
   uint32_t hash () const override
   {
     return std::hash<int> () (m_value);
+  }
+
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_int> (m_value);
   }
 
 private:
@@ -241,6 +271,13 @@ public:
   {
     return std::hash<bool> () (VALUE);
   }
+
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_bool<VALUE> > ();
+  }
+
 };
 
 ///////////////////////////////
@@ -263,6 +300,11 @@ public:
     return std::hash<uint32_t> () (1);
   }
 
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_nil> ();
+  }
 };
 
 ///////////////////////////////
@@ -336,9 +378,6 @@ public:
   }
 
 protected:
-  using mutable_ptr = std::shared_ptr<ast_node>;
-  virtual mutable_ptr clone () const = 0;
-
   std::vector<ast_node::ptr> m_children;
 
 private:
@@ -531,6 +570,12 @@ public:
     return node_type_enum::CALLABLE_BUILTIN == t;
   }
 
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_callable_builtin<builtin_fn> > (signature (), m_fn);
+  }
+
 private:
   builtin_fn m_fn;
 };
@@ -573,6 +618,12 @@ public:
     return node_type_enum::CALLABLE_LAMBDA == t;
   }
 
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_callable_lambda> (m_binds, m_ast, m_outer_env);
+  }
+
 private:
   ast_node::ptr m_binds;
   const ast_node_container_base* m_binds_as_container;
@@ -612,6 +663,12 @@ public:
   ast_node::ptr callable_node () const 
   {
     return m_callable_node;
+  }
+
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_macro_call> (m_callable_node);
   }
 
 private:
@@ -715,7 +772,7 @@ public:
     return node_type_enum::HASHMAP == t;
   }
 
-  std::shared_ptr<ast_node_hashmap> clone () const
+  mutable_ptr clone () const override
   {
     auto retVal = std::make_shared<ast_node_hashmap> ();
     retVal->m_hashtable = m_hashtable;

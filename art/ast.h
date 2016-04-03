@@ -57,6 +57,17 @@ public:
   virtual bool operator == (const ast_node&) const = 0;
   virtual uint32_t hash () const = 0;
 
+  ast_node::ptr meta () const
+  {
+    return m_meta;
+  }
+
+  ast_node::ptr clone_with_meta (ast_node::ptr meta) const
+  {
+    auto retVal = clone ();
+    retVal->m_meta = meta;
+    return retVal;
+  }
 
   //
   template <typename T>
@@ -102,9 +113,15 @@ public:
     return static_cast<const T*> (this);
   }
 
+protected:
+  using mutable_ptr = std::shared_ptr <ast_node>;
+  virtual mutable_ptr clone () const = 0;
+
 private:
   ast_node (const ast_node&) = delete;
   ast_node& operator = (const ast_node&) = delete;
+
+  ast_node::ptr m_meta = nil_node;
 };
 
 ///////////////////////////////

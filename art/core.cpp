@@ -545,7 +545,7 @@ builtin_assoc (const call_arguments& args)
 
   for (size_t i = 1; i < args_size; i += 2)
   {
-    retVal->insert (args[i], args[i + 1]);
+    retVal->as<ast_node_hashmap> ()->insert (args[i], args[i + 1]);
   }
 
   return retVal;
@@ -563,7 +563,7 @@ builtin_dissoc (const call_arguments& args)
 
   for (size_t i = 1; i < args_size; ++i)
   {
-    retVal->erase (args[i]);
+    retVal->as<ast_node_hashmap> ()->erase (args[i]);
   }
 
   return retVal;
@@ -644,6 +644,32 @@ builtin_is_sequential (const call_arguments& args)
   return ast_node_from_bool (isSeq);
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_meta (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  return args[0]->meta ();
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_with_meta (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size != 2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto meta = args[1];
+  if (meta->type () != node_type_enum::HASHMAP)
+    raise<mal_exception_eval_invalid_arg> (meta->to_string ());
+
+  return args[0]->clone_with_meta (meta);
+}
+
 } // end of anonymous namespace
 
 ///////////////////////////////
@@ -702,6 +728,9 @@ core::core (environment::ptr root_env)
   env_add_builtin ("vals", builtin_vals);
   env_add_builtin ("vals", builtin_vals);
   env_add_builtin ("sequential?", builtin_is_sequential);
+
+  env_add_builtin ("meta", builtin_meta);
+  env_add_builtin ("with-meta", builtin_with_meta);
 
   for (auto&& c : content ())
   {

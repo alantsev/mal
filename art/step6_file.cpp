@@ -392,6 +392,7 @@ main(int argc, char** argv)
   // load file
   EVAL (READ ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
   // swap!
+  // FIXME - here is the error - swapArgs should be quoted
   EVAL (READ ("(def! swap! (fn* [swapAtom swapFn & swapArgs] (do (reset! swapAtom (eval (concat (list swapFn) (list (deref swapAtom)) swapArgs))) (deref swapAtom) ) ) )"), env);
   
 
