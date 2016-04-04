@@ -6,7 +6,13 @@
 class ast_builder
 {
 public:
+  //
+  using reader_macro_fn = std::function <ast_node::ptr (ast_node::ptr)>;
+
+  //
   ast_builder ();
+
+  ast_builder& add_reader_macro (const reader_macro_fn &);
 
   ast_builder& open_hashmap ();
   ast_builder& close_hashmap ();
@@ -48,11 +54,21 @@ private:
   //
   ast_node_container_base* back_node ()
   {
-    return m_current_stack.back ();
+    return m_current_stack.back ().m_builder;
   }
 
+  void push_node (ast_node_container_base*);
+  void pop_node ();
+  void apply_reader_macro ();
+
+  struct builder_stack_entry
+  {
+    ast_node_container_base* m_builder = {};
+    std::deque <std::pair<reader_macro_fn, size_t>> m_reader_macros = {};
+  };
+
   std::unique_ptr<ast_node_list> m_meta_root;
-  std::deque<ast_node_container_base*> m_current_stack;
+  std::deque<builder_stack_entry> m_current_stack;
 
   std::string m_picewise_string;
 };

@@ -5,9 +5,18 @@
 ///////////////////////////////
 ast_builder::ast_builder ()
   : m_meta_root (new ast_node_list {})
-  , m_current_stack ({m_meta_root.get ()})
-{}
+{
+  push_node (m_meta_root.get ());
+}
 
+///////////////////////////////
+ast_builder& 
+ast_builder::add_reader_macro (const reader_macro_fn& reader_macro)
+{
+  m_current_stack.back ().m_reader_macros.emplace_back (reader_macro, back_node ()->size ());
+  return *this;
+}
+  
 ///////////////////////////////
 ast_builder&
 ast_builder::open_list ()
@@ -16,7 +25,7 @@ ast_builder::open_list ()
   ast_node_list* child_ref = child.get ();
 
   back_node ()->add_child (child);
-  m_current_stack.push_back (child_ref);
+  push_node (child_ref);
   return *this;
 }
 
@@ -25,10 +34,7 @@ ast_builder&
 ast_builder::close_list ()
 {
   back_node ()->as_or_throw<ast_node_list, mal_exception_parse_error> ();
-  m_current_stack.pop_back ();
-  if (m_current_stack.size () == 0) 
-    raise<mal_exception_parse_error> ();
-
+  pop_node ();
   return *this;
 }
 
@@ -40,7 +46,7 @@ ast_builder::open_vector ()
   ast_node_vector* child_ref = child.get ();
 
   back_node ()->add_child (child);
-  m_current_stack.push_back (child_ref);
+  push_node (child_ref);
   return *this;
 }
 
@@ -49,10 +55,7 @@ ast_builder&
 ast_builder::close_vector ()
 {
   back_node ()->as_or_throw<ast_node_vector, mal_exception_parse_error> ();
-  m_current_stack.pop_back ();
-  if (m_current_stack.size () == 0) 
-    raise<mal_exception_parse_error> ();
-
+  pop_node ();
   return *this;
 }
 
@@ -148,7 +151,7 @@ ast_builder::open_hashmap ()
   auto child_ref = child.get ();
 
   back_node ()->add_child (child);
-  m_current_stack.push_back (child_ref);
+  push_node (child_ref);
   return *this;
 }
 
@@ -160,9 +163,7 @@ ast_builder::close_hashmap ()
   if (back_node ()->size () % 2 != 0) 
     raise<mal_exception_parse_error> ("odd number of entries for hashmap: " + back_node ()->to_string ());
 
-  m_current_stack.pop_back ();
-  if (m_current_stack.size () == 0) 
-    raise<mal_exception_parse_error> ();
+  pop_node ();
 
   return *this;
 }
@@ -173,6 +174,8 @@ ast_builder::build()
 {
   if (m_current_stack.size () != 1) 
     raise<mal_exception_parse_error> ();
+
+  apply_reader_macro ();
 
   const size_t level0_count = m_meta_root->size (); 
   if (level0_count > 1) 
@@ -188,4 +191,40 @@ ast_builder::build()
 
   return retVal;
 }
+
+///////////////////////////////
+void
+ast_builder::pop_node ()
+{
+  apply_reader_macro ();
+  m_current_stack.pop_back ();
+  if (m_current_stack.size () == 0) 
+    raise<mal_exception_parse_error> ();
+}
+
+///////////////////////////////
+void
+ast_builder::push_node (ast_node_container_base* child_ref)
+{
+  m_current_stack.emplace_back ();
+  m_current_stack.back ().m_builder = child_ref;
+
+}
+
+///////////////////////////////
+void
+ast_builder::apply_reader_macro ()
+{
+  auto & entry = m_current_stack.back ();
+  for (auto iter = entry.m_reader_macros.rbegin (), e = entry.m_reader_macros.rend (); iter != e; ++iter)
+  {
+    const auto listIdx = iter->second;
+    if (listIdx >= entry.m_builder->size ())
+      raise<mal_exception_parse_error> (entry.m_builder->to_string ());
+
+    auto newNode = iter->first ((*entry.m_builder)[listIdx]);
+    entry.m_builder->replace (listIdx, newNode);
+  }
+}
+
 

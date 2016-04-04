@@ -326,6 +326,12 @@ public:
     m_children.push_back (child);
   }
 
+  void replace (size_t index, ast_node::ptr child)
+  {
+    assert (index < size ());
+    m_children[index] = child;
+  }
+
   ast_node::ptr operator [] (size_t index) const
   {
     assert (index < size ());
@@ -378,7 +384,7 @@ public:
   }
 
 protected:
-  std::vector<ast_node::ptr> m_children;
+  std::deque<ast_node::ptr> m_children;
 
 private:
   template <typename Fn>

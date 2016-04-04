@@ -21,7 +21,6 @@ public:
   reader (const std::string &line)
     : m_line (line)
   {
-    m_builders.emplace_back ();
     for (size_t e = m_line.length (); m_current_position < e;)
     {
       auto ch = m_line [m_current_position];
@@ -39,45 +38,14 @@ public:
 
       process_token (m_last_delim_position, m_current_position + 1);
     }
-
-    while (m_builders.size () > 1)
-    {
-      close_macro_expand ();
-    }
   }
 
   ast build ()
   {
-    assert (m_builders.size () == 1);
-    return m_builders.back ().build ();
+    return builder ().build ();
   }
 
 private:
-  //
-  void open_macro_expand (std::string macroSymbol)
-  {
-    m_builders.back ()
-      .open_list ()
-      .add_symbol (std::move (macroSymbol));
-    m_builders.emplace_back ();
-  }
-
-  //
-  void close_macro_expand ()
-  {
-    assert (m_builders.size () > 1);
-    auto node = m_builders.back ().build ();
-    m_builders.pop_back ();
-    m_builders.back ().add_node (node).close_list ();
-  }
-
-  //
-  void close_macro_expand_for_top_level ()
-  {
-    while (m_builders.size () > 1 && m_builders.back ().level () == 0)
-      close_macro_expand ();
-  }
-
   //
   void call_op (char ch)
   {
@@ -103,34 +71,32 @@ private:
       int64_t valInt = std::strtoll (m_line.data () + from, &end, 10);
       if (end == m_line.data () + to - 1)
       {
-        m_builders.back ().add_int (valInt);
+        builder ().add_int (valInt);
       }
       else
       {
         const std::string token = get_token ();
         if (token[0] == ':')
         {
-          m_builders.back ().add_keyword (std::move (token));
+          builder ().add_keyword (std::move (token));
         }
         else if (token == "false")
         {
-          m_builders.back ().add_bool (false);
+          builder ().add_bool (false);
         }
         else if (token == "true")
         {
-          m_builders.back ().add_bool (true);
+          builder ().add_bool (true);
         }
         else if (token == "nil")
         {
-          m_builders.back ().add_nil ();
+          builder ().add_nil ();
         }
         else
         {
-          m_builders.back ().add_symbol (std::move (token));
+          builder ().add_symbol (std::move (token));
         }
       }
-
-      close_macro_expand_for_top_level ();
     }
   }
 
@@ -138,7 +104,7 @@ private:
   {
     if (from + 1 < to)
     {
-      m_builders.back ().append_string (m_line.substr (from, to - from - 1));
+      builder ().append_string (m_line.substr (from, to - from - 1));
     }
   }
 
@@ -152,36 +118,47 @@ private:
   //
   void expand_normal_parse_fn (char ch)
   {
+    auto make_basic_reader_macro = [] (const std::string &symbolName)
+    {
+      return [symbolName] (ast_node::ptr node) -> ast_node::ptr
+        {
+          auto retVal = mal::make_list ();
+          retVal->add_child (mal::make_symbol (symbolName));
+          retVal->add_child (node);
+          return retVal;
+        };
+    };
+
     switch (ch)
     {
       case '@':
       {
         m_last_delim_position = m_current_position;
-        open_macro_expand ("deref");
+        builder ().add_reader_macro (make_basic_reader_macro ("deref"));
         break;
       }
       case '\'':
       {
         m_last_delim_position = m_current_position;
-        open_macro_expand ("quote");
+        builder ().add_reader_macro (make_basic_reader_macro ("quote"));
         break;
       }
       case '`':
       {
         m_last_delim_position = m_current_position;
-        open_macro_expand ("quasiquote");
+        builder ().add_reader_macro (make_basic_reader_macro ("quasiquote"));
         break;
       }
       case '~':
       {
         if (m_current_position < m_line.length () && m_line[m_current_position] == '@')
         {
-          open_macro_expand ("splice-unquote");
+          builder ().add_reader_macro (make_basic_reader_macro ("splice-unquote"));
           ++m_current_position;
         }
         else
         {
-          open_macro_expand ("unquote");
+          builder ().add_reader_macro (make_basic_reader_macro ("unquote"));
         }
 
         m_last_delim_position = m_current_position;
@@ -206,52 +183,49 @@ private:
       case '(':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_builders.back ().open_list ();
+        builder ().open_list ();
         mark_delimiter ();
         break;
       }
       case ')':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_builders.back ().close_list ();
+        builder ().close_list ();
         mark_delimiter ();
-        close_macro_expand_for_top_level ();
         break;
       }
       case '{':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_builders.back ().open_hashmap ();
+        builder ().open_hashmap ();
         mark_delimiter ();
         break;
       }
       case '}':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_builders.back ().close_hashmap ();
+        builder ().close_hashmap ();
         mark_delimiter ();
-        close_macro_expand_for_top_level ();
         break;
       }
       case '[':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_builders.back ().open_vector ();
+        builder ().open_vector ();
         mark_delimiter ();
         break;
       }
       case ']':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_builders.back ().close_vector ();
+        builder ().close_vector ();
         mark_delimiter ();
-        close_macro_expand_for_top_level ();
         break;
       }
       case '"':
       {
         process_token (m_last_delim_position, m_current_position);
-        m_builders.back ().start_string ();
+        builder ().start_string ();
         m_currrent_state = state_enum::STRING_STATE;
         m_last_delim_position = m_current_position;
         break;
@@ -284,9 +258,8 @@ private:
       {
         m_currrent_state = state_enum::EXPAND_NORMAL_STATE;
         process_string (m_last_delim_position, m_current_position);
-        m_builders.back ().finish_string ();
+        builder ().finish_string ();
         m_last_delim_position = m_current_position;
-        close_macro_expand_for_top_level ();
         break;
       }
       case '\\':
@@ -306,12 +279,12 @@ private:
     {
       case 'n':
       {
-        m_builders.back ().append_string ("\n");
+        builder ().append_string ("\n");
         break;
       }
       default:
       {
-        m_builders.back ().append_string ({ch});
+        builder ().append_string ({ch});
         break;
       }
     };
@@ -330,6 +303,11 @@ private:
         break;
       }
     };
+  }
+
+  ast_builder & builder ()
+  {
+    return m_builder;
   }
 
   //
@@ -357,7 +335,9 @@ private:
 
   //
   const std::string &m_line;
-  std::deque<ast_builder> m_builders;
+
+
+  ast_builder m_builder;
 
   size_t m_last_delim_position = 0;
   size_t m_current_position = 0;
