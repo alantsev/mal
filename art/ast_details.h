@@ -332,6 +332,12 @@ public:
     m_children[index] = child;
   }
 
+  void erase (size_t index)
+  {
+    assert (index < size ());
+    m_children.erase (m_children.begin () + index);
+  }
+
   ast_node::ptr operator [] (size_t index) const
   {
     assert (index < size ());

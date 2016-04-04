@@ -120,17 +120,35 @@ private:
   {
     auto make_basic_reader_macro = [] (const std::string &symbolName)
     {
-      return [symbolName] (ast_node::ptr node) -> ast_node::ptr
+      return [symbolName] (ast_node_container_base* listToModify, size_t listIdx) -> void
         {
-          auto retVal = mal::make_list ();
-          retVal->add_child (mal::make_symbol (symbolName));
-          retVal->add_child (node);
-          return retVal;
+          auto newNode = mal::make_list ();
+          newNode->add_child (mal::make_symbol (symbolName));
+          newNode->add_child ((*listToModify) [listIdx]);
+          listToModify->replace (listIdx, newNode);
         };
     };
 
     switch (ch)
     {
+      case '^':
+      {
+        m_last_delim_position = m_current_position;
+        auto with_meta_fn = [] (ast_node_container_base* listToModify, size_t listIdx) -> void
+        {
+          if (listIdx + 1 >= listToModify->size ())
+            raise<mal_exception_parse_error> (listToModify->to_string ());
+
+          auto newNode = mal::make_list ();
+          newNode->add_child (mal::make_symbol ("with-meta"));
+          newNode->add_child ((*listToModify) [listIdx + 1]);
+          newNode->add_child ((*listToModify) [listIdx]);
+          listToModify->replace (listIdx, newNode);
+          listToModify->erase (listIdx + 1);
+        };
+        builder ().add_reader_macro (with_meta_fn);
+        break;
+      }
       case '@':
       {
         m_last_delim_position = m_current_position;

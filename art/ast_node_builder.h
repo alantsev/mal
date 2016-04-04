@@ -7,7 +7,7 @@ class ast_builder
 {
 public:
   //
-  using reader_macro_fn = std::function <ast_node::ptr (ast_node::ptr)>;
+  using reader_macro_fn = std::function <void (ast_node_container_base*, size_t)>;
 
   //
   ast_builder ();

@@ -222,8 +222,7 @@ ast_builder::apply_reader_macro ()
     if (listIdx >= entry.m_builder->size ())
       raise<mal_exception_parse_error> (entry.m_builder->to_string ());
 
-    auto newNode = iter->first ((*entry.m_builder)[listIdx]);
-    entry.m_builder->replace (listIdx, newNode);
+    iter->first (entry.m_builder, listIdx);
   }
 }
 
