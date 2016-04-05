@@ -520,9 +520,6 @@ eval_ast (ast tree, environment::ptr a_env)
 std::string
 PRINT (ast tree)
 {
-  if (!tree)
-    return "";
-
   return pr_str (tree, true);
 }
 

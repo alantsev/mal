@@ -194,7 +194,7 @@ builtin_pr_str (const call_arguments& args)
   {
     if (i > 0)
       retVal += " ";
-    retVal += args[i]->to_string (true);
+    retVal += pr_str (args[i], true);
   }
 
   return std::make_shared<ast_node_string> (std::move (retVal));
@@ -209,7 +209,7 @@ builtin_str (const call_arguments& args)
   std::string retVal;
   for (size_t i = 0; i < args_size; ++i)
   {
-    retVal += args[i]->to_string (false);
+    retVal += pr_str (args[i], false);
   }
 
   return std::make_shared<ast_node_string> (std::move (retVal));
@@ -226,7 +226,7 @@ builtin_prn (const call_arguments& args)
   {
     if (i > 0)
       printVal += " ";
-    printVal += args[i]->to_string (true);
+    printVal += pr_str (args[i], true);
   }
   printf("%s\n", printVal.c_str ());
 
@@ -244,7 +244,7 @@ builtin_println (const call_arguments& args)
   {
     if (i > 0)
       printVal += " ";
-    printVal += args[i]->to_string (false);
+    printVal += pr_str (args[i], false);
   }
   printf("%s\n", printVal.c_str ());
 
