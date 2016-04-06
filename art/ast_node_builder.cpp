@@ -147,6 +147,13 @@ ast_builder::finish_string ()
 ast_builder&
 ast_builder::open_hashmap ()
 {
+  add_reader_macro (
+    [] (ast_node_container_base* listToModify, size_t listIdx) -> void
+    {
+      auto newNode = mal::make_hashmap ((*listToModify) [listIdx]->as_or_throw<ast_node_ht_list, mal_exception_parse_error> ());
+      listToModify->replace (listIdx, newNode);
+    });
+
   auto child = mal::make_ht_list ();
   auto child_ref = child.get ();
 
@@ -160,11 +167,7 @@ ast_builder&
 ast_builder::close_hashmap ()
 {
   back_node ()->as_or_throw<ast_node_ht_list, mal_exception_parse_error> ();
-  if (back_node ()->size () % 2 != 0) 
-    raise<mal_exception_parse_error> ("odd number of entries for hashmap: " + back_node ()->to_string ());
-
   pop_node ();
-
   return *this;
 }
 
@@ -182,7 +185,7 @@ ast_builder::build()
     raise<mal_exception_parse_error> (m_meta_root->to_string ());
 
   if (level0_count == 0)
-    return ast {};
+    return ast_node::invalid_node;
 
   assert (m_meta_root->size () > 0);
   ast_node::ptr retVal = (*m_meta_root) [0];

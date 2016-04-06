@@ -27,6 +27,35 @@ public:
 };
 
 ///////////////////////////////
+class ast_node_invalid : public ast_node_base<node_type_enum::INVALID>
+{
+public:
+  ast_node_invalid () = default;
+  std::string to_string (bool print_readable) const override
+  {
+    return {};
+  }
+
+  bool operator == (const ast_node& rp) const override
+  {
+    return this == std::addressof (rp);
+  }
+
+  uint32_t hash () const override
+  {
+    const uint32_t retVal = reinterpret_cast<uint64_t> (this) * 2052828881 + 541325663;
+    return retVal;
+  }
+
+protected:
+  mutable_ptr clone () const override
+  {
+    return std::make_shared<ast_node_invalid> ();
+  }
+};
+
+
+///////////////////////////////
 class ast_node_atom : public ast_node_base<node_type_enum::ATOM>
 {
 public:
@@ -843,6 +872,13 @@ namespace mal
   make_ht_list () 
   {
     return std::make_shared<ast_node_ht_list> ();
+  }
+
+  ///////////////////////////////
+  inline std::shared_ptr<ast_node_hashmap>
+  make_hashmap ()
+  {
+    return std::make_shared<ast_node_hashmap> ();
   }
 
   ///////////////////////////////

@@ -528,7 +528,8 @@ builtin_is_hashmap (const call_arguments& args)
   if (args_size !=  1)
     raise<mal_exception_eval_invalid_arg> ();
 
-  return ast_node_from_bool (args[0]->type () == node_type_enum::HASHMAP);
+  const auto type = args[0]->type ();
+  return ast_node_from_bool (type == node_type_enum::HASHMAP);
 }
 
 ///////////////////////////////

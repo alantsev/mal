@@ -104,17 +104,13 @@ eval_ast (ast node, environment::const_ptr a_env)
             auto&& node_vector = node->as<ast_node_vector> ();
             return node_vector->map ([&a_env] (ast_node::ptr v) { return eval_impl (v, a_env);});
         }
-    case node_type_enum::HT_LIST:
+    case node_type_enum::HASHMAP:
         {
             // not as_or_throw - we know the type
-            const auto& node_container = node->as<ast_node_ht_list> ();
-            // TODO - add here optimization to do not clone underlying node if the current pointer is unique!
-            auto evaledList = node_container->map (
-                [&a_env] (ast_node::ptr v) { 
-                  return eval_impl (v, a_env);
-                });
-            ast_node::ptr retVal = mal::make_hashmap (evaledList->as<ast_node_ht_list> ());
-            return retVal;
+            const auto& node_hashmap = node->as<ast_node_hashmap> ();
+            auto retVal = mal::make_hashmap ();
+            node_hashmap->for_each ([&] (ast_node::ptr k, ast_node::ptr v) { retVal->insert (eval_impl (k, a_env), eval_impl (v, a_env)); });
+            return static_cast<ast_node::ptr> (retVal);
         }
 
     default:

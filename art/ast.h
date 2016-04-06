@@ -29,6 +29,7 @@ enum class node_type_enum
   CALLABLE_LAMBDA,
   MACRO_CALL,
   HT_LIST, // for internal use only
+  INVALID,
   NODE_TYPE_COUNT
 };
 
@@ -41,6 +42,7 @@ public:
   static ptr nil_node;
   static ptr true_node;
   static ptr false_node;
+  static ptr invalid_node;
 
   //
   ast_node () = default;
