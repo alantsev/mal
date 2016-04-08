@@ -541,6 +541,10 @@ execReplSafe (TFn&& fn)
   {
     printline ("error: " + ex.what ());
   }
+  catch (const ast_node::ptr& ex)
+  {
+    printline ("unhandled exception: " + ex->to_string ());
+  }
 }
 
 ///////////////////////////////
@@ -591,7 +595,12 @@ main(int argc, char** argv)
     if (args_size <  2)
       raise<mal_exception_eval_invalid_arg> ();
 
-    auto callable_node = args[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
+    auto firstNode = args[0];
+    if (auto macro_node = firstNode->as_or_zero<ast_node_macro_call> ())
+    {
+      firstNode = macro_node->callable_node ();
+    }
+    auto callable_node = firstNode->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
 
     auto args_list = mal::make_list ();
     for (size_t i = 1; i < args_size - 1; ++i)
@@ -623,7 +632,13 @@ main(int argc, char** argv)
     if (args_size <  2)
       raise<mal_exception_eval_invalid_arg> ();
 
-    auto callable_node = args[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
+    auto firstNode = args[0];
+    if (auto macro_node = firstNode->as_or_zero<ast_node_macro_call> ())
+    {
+      firstNode = macro_node->callable_node ();
+    }
+
+    auto callable_node = firstNode->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
     auto last_list = args [1]->as_or_throw <ast_node_container_base, mal_exception_eval_not_list> ();
 
     auto fn = [&] (ast_node::ptr v) 
@@ -651,6 +666,39 @@ main(int argc, char** argv)
   };
   env->set ("map", std::make_shared<ast_node_callable_builtin<decltype(mapFn)>> ("map", mapFn));
 
+  // swap!
+  auto swapFn = [env] (const call_arguments& args) -> ast_node::ptr
+  {
+    const auto args_size = args.size ();
+    if (args_size <  2)
+      raise<mal_exception_eval_invalid_arg> ();
+
+    auto atom_node = args [0]->as_or_throw <ast_node_atom, mal_exception_eval_not_atom> ();
+    auto secondNode = args[1];
+    if (auto macro_node = secondNode->as_or_zero<ast_node_macro_call> ())
+    {
+      secondNode = macro_node->callable_node ();
+    }
+    auto callable_node = secondNode->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
+
+    auto args_list = mal::make_list ();
+    args_list->add_child (atom_node->get_value ());
+    for (size_t i = 2; i < args_size; ++i)
+    {
+      args_list->add_child (args[i]);
+    }
+
+    ast retVal;
+    ast tree;
+    environment::ptr a_env;
+    std::tie (tree, a_env, retVal) = callable_node->call_tco (call_arguments {args_list.get (), 0, args_list->size ()});
+
+    auto newVal = retVal ? retVal : EVAL (tree, a_env);
+    atom_node->set_value (newVal);
+    return newVal;
+  };
+  env->set ("swap!", std::make_shared<ast_node_callable_builtin<decltype(swapFn)>> ("swap!", swapFn));
+
   // readlineFn
   auto readlineFn = [&] (const call_arguments& args) -> ast_node::ptr
   {
@@ -675,7 +723,7 @@ main(int argc, char** argv)
 
   // argv
   auto argvList = mal::make_list ();
-  for (size_t i = 1; i < argc; ++i)
+  for (size_t i = 2; i < argc; ++i)
   {
     argvList->add_child (READ (argv [i]));
   }
@@ -686,8 +734,6 @@ main(int argc, char** argv)
   EVAL (READ ("(def! not (fn* (a) (if a false true)))"), env);
   // load file
   EVAL (READ ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
-  // swap!
-  EVAL (READ ("(defmacro! swap! (fn* [swapAtom swapFn & swapArgs] `(do (reset! ~swapAtom (~swapFn @~swapAtom ~@swapArgs) ) (deref ~swapAtom) ) ) )"), env);
   // cond
   EVAL (READ ("(defmacro! cond (fn* (& xs) (if (> (count xs) 0) (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw \"odd number of forms to cond\")) (cons 'cond (rest (rest xs)))))))"), env);
   // nil?

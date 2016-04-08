@@ -71,7 +71,14 @@ ast
 eval_impl (ast root, environment::const_ptr a_env)
 {
     if (root->type () != node_type_enum::LIST)
-        return { eval_ast (std::move (root), a_env) };
+        return { eval_ast (root, a_env) };
+
+    auto root_list = root->as<ast_node_list> ();
+
+    if (root_list->size () == 0)
+    {
+        return root;
+    }
 
     ast new_node = eval_ast (root, a_env);
     auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
