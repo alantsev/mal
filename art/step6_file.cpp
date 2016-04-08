@@ -363,17 +363,6 @@ main(int argc, char** argv)
   auto env = environment::make ();
   core ns (env);
 
-  // ext
-  // eval
-  auto evalFn = [env] (const call_arguments& args) -> ast_node::ptr
-  {
-    const auto args_size = args.size ();
-    if (args_size !=  1)
-      raise<mal_exception_eval_invalid_arg> ();
-    return EVAL (args[0], env);
-  };
-  env->set ("eval", std::make_shared<ast_node_callable_builtin<decltype(evalFn)>> ("eval", evalFn));
-
   // argv
   auto argvList = mal::make_list ();
   for (size_t i = 1; i < argc; ++i)
@@ -386,11 +375,7 @@ main(int argc, char** argv)
   // define not function
   EVAL (READ ("(def! not (fn* (a) (if a false true)))"), env);
   // load file
-  EVAL (READ ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
-  // swap!
-  // FIXME - here is the error - swapArgs should be quoted
-  EVAL (READ ("(def! swap! (fn* [swapAtom swapFn & swapArgs] (do (reset! swapAtom (eval (concat (list swapFn) (list (deref swapAtom)) swapArgs))) (deref swapAtom) ) ) )"), env);
-  
+  EVAL (READ ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);  
 
   if (argc < 2)
   {

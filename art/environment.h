@@ -48,5 +48,8 @@ private:
   using symbol_lookup_map = std::unordered_map <std::string, ast_node::ptr>;
   symbol_lookup_map m_data;
   environment::const_ptr m_outer;
-
 };
+
+///////////////////////////////
+ast
+EVAL (ast tree, environment::ptr a_env); // fwd decl

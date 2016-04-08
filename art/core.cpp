@@ -790,6 +790,147 @@ builtin_seq (const call_arguments& args)
   return ast_node::nil_node;
 }
 
+///////////////////////////////
+ast_node::ptr
+builtin_apply (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size <  2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto firstNode = args[0];
+  if (auto macro_node = firstNode->as_or_zero<ast_node_macro_call> ())
+  {
+    firstNode = macro_node->callable_node ();
+  }
+  auto callable_node = firstNode->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
+
+  auto args_list = mal::make_list ();
+  for (size_t i = 1; i < args_size - 1; ++i)
+  {
+    args_list->add_child (args[i]);
+  }
+
+  auto last_list = args [args_size - 1]->as_or_throw <ast_node_container_base, mal_exception_eval_not_list> ();
+  for (size_t  i = 0, e = last_list->size (); i < e; ++i)
+  {
+    args_list->add_child ((*last_list)[i]);
+  }
+
+  ast retVal;
+  ast tree;
+  environment::ptr a_env;
+  std::tie (tree, a_env, retVal) = callable_node->call_tco (call_arguments {args_list.get (), 0, args_list->size ()});
+  if (retVal)
+    return retVal;
+
+  return EVAL (tree, a_env);
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_map (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size <  2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto firstNode = args[0];
+  if (auto macro_node = firstNode->as_or_zero<ast_node_macro_call> ())
+  {
+    firstNode = macro_node->callable_node ();
+  }
+
+  auto callable_node = firstNode->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
+  auto last_list = args [1]->as_or_throw <ast_node_container_base, mal_exception_eval_not_list> ();
+
+  auto fn = [&] (ast_node::ptr v) 
+  {
+    auto args_list = mal::make_list ();
+    args_list->add_child (v);
+
+    ast retVal;
+    ast tree;
+    environment::ptr a_env;
+    std::tie (tree, a_env, retVal) = callable_node->call_tco (call_arguments {args_list.get (), 0, args_list->size ()});
+    if (retVal)
+      return retVal;
+
+    return EVAL (tree, a_env);
+  };
+
+  auto retVal = mal::make_list ();
+  for (size_t i = 0, e = last_list->size (); i < e; ++i)
+  {
+    retVal->add_child (fn ((*last_list)[i]));
+  }
+
+  return retVal;
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_swap (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size <  2)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  auto atom_node = args [0]->as_or_throw <ast_node_atom, mal_exception_eval_not_atom> ();
+  auto secondNode = args[1];
+  if (auto macro_node = secondNode->as_or_zero<ast_node_macro_call> ())
+  {
+    secondNode = macro_node->callable_node ();
+  }
+  auto callable_node = secondNode->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
+
+  auto args_list = mal::make_list ();
+  args_list->add_child (atom_node->get_value ());
+  for (size_t i = 2; i < args_size; ++i)
+  {
+    args_list->add_child (args[i]);
+  }
+
+  ast retVal;
+  ast tree;
+  environment::ptr a_env;
+  std::tie (tree, a_env, retVal) = callable_node->call_tco (call_arguments {args_list.get (), 0, args_list->size ()});
+
+  auto newVal = retVal ? retVal : EVAL (tree, a_env);
+  atom_node->set_value (newVal);
+  return newVal;
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_readline (const call_arguments& args)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+
+  const std::string& prompt = args [0]->as_or_throw<ast_node_string, mal_exception_eval_not_string>()->value ();
+
+  try
+  {
+    return mal::make_string (readline (prompt));
+  }
+  catch (const mal_exception_stop&)
+  {
+    printf ("\n");
+    return ast_node::nil_node;
+  }
+}
+
+///////////////////////////////
+ast_node::ptr
+builtin_eval (const call_arguments& args, environment::ptr env)
+{
+  const auto args_size = args.size ();
+  if (args_size !=  1)
+    raise<mal_exception_eval_invalid_arg> ();
+  return EVAL (args[0], env);
+}
 
 } // end of anonymous namespace
 
@@ -856,6 +997,13 @@ core::core (environment::ptr root_env)
   env_add_builtin ("conj", builtin_conj);
   env_add_builtin ("string?", builtin_is_string);
   env_add_builtin ("seq", builtin_seq);
+
+
+  env_add_builtin ("apply", builtin_apply);
+  env_add_builtin ("map", builtin_map);
+  env_add_builtin ("swap!", builtin_swap);
+  env_add_builtin ("readline", builtin_readline);
+  env_add_builtin ("eval", [root_env] (const call_arguments& args) { return builtin_eval (args, root_env); });
 
   for (auto&& c : content ())
   {

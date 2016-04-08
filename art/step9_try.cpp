@@ -579,84 +579,6 @@ main(int argc, char** argv)
   auto env = environment::make ();
   core ns (env);
 
-  // ext
-  // eval
-  auto evalFn = [env] (const call_arguments& args) -> ast_node::ptr
-  {
-    const auto args_size = args.size ();
-    if (args_size !=  1)
-      raise<mal_exception_eval_invalid_arg> ();
-    return EVAL (args[0], env);
-  };
-  env->set ("eval", std::make_shared<ast_node_callable_builtin<decltype(evalFn)>> ("eval", evalFn));
-
-  // apply
-  auto applyFn = [env] (const call_arguments& args) -> ast_node::ptr
-  {
-    const auto args_size = args.size ();
-    if (args_size <  2)
-      raise<mal_exception_eval_invalid_arg> ();
-
-    auto callable_node = args[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
-
-    auto args_list = mal::make_list ();
-    for (size_t i = 1; i < args_size - 1; ++i)
-    {
-      args_list->add_child (args[i]);
-    }
-
-    auto last_list = args [args_size - 1]->as_or_throw <ast_node_container_base, mal_exception_eval_not_list> ();
-    for (size_t  i = 0, e = last_list->size (); i < e; ++i)
-    {
-      args_list->add_child ((*last_list)[i]);
-    }
-
-    ast retVal;
-    ast tree;
-    environment::ptr a_env;
-    std::tie (tree, a_env, retVal) = callable_node->call_tco (call_arguments {args_list.get (), 0, args_list->size ()});
-    if (retVal)
-      return retVal;
-
-    return EVAL (tree, a_env);
-  };
-  env->set ("apply", std::make_shared<ast_node_callable_builtin<decltype(applyFn)>> ("apply", applyFn));
-
-  // map
-  auto mapFn = [env] (const call_arguments& args) -> ast_node::ptr
-  {
-    const auto args_size = args.size ();
-    if (args_size <  2)
-      raise<mal_exception_eval_invalid_arg> ();
-
-    auto callable_node = args[0]->as_or_throw<ast_node_callable, mal_exception_eval_not_callable> ();
-    auto last_list = args [1]->as_or_throw <ast_node_container_base, mal_exception_eval_not_list> ();
-
-    auto fn = [&] (ast_node::ptr v) 
-    {
-      auto args_list = mal::make_list ();
-      args_list->add_child (v);
-
-      ast retVal;
-      ast tree;
-      environment::ptr a_env;
-      std::tie (tree, a_env, retVal) = callable_node->call_tco (call_arguments {args_list.get (), 0, args_list->size ()});
-      if (retVal)
-        return retVal;
-
-      return EVAL (tree, a_env);
-    };
-
-    auto retVal = mal::make_list ();
-    for (size_t i = 0, e = last_list->size (); i < e; ++i)
-    {
-      retVal->add_child (fn ((*last_list)[i]));
-    }
-
-    return retVal;
-  };
-  env->set ("map", std::make_shared<ast_node_callable_builtin<decltype(mapFn)>> ("map", mapFn));
-
   // argv
   auto argvList = mal::make_list ();
   for (size_t i = 1; i < argc; ++i)
@@ -670,8 +592,6 @@ main(int argc, char** argv)
   EVAL (READ ("(def! not (fn* (a) (if a false true)))"), env);
   // load file
   EVAL (READ ("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \")\")))))"), env);
-  // swap!
-  EVAL (READ ("(def! swap! (fn* [swapAtom swapFn & swapArgs] (do (reset! swapAtom (eval (concat (list swapFn) (list (deref swapAtom)) swapArgs))) (deref swapAtom) ) ) )"), env);
   // cond
   EVAL (READ ("(defmacro! cond (fn* (& xs) (if (> (count xs) 0) (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw \"odd number of forms to cond\")) (cons 'cond (rest (rest xs)))))))"), env);
   // or

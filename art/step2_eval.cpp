@@ -17,7 +17,7 @@ static const char* PROMPT = "user> ";
 
 ///////////////////////////////
 std::string 
-readline ()
+readline (const std::string& prompt = PROMPT)
 {
     std::string retVal;
     do
@@ -64,23 +64,23 @@ apply (const ast_node_list* callable_list)
 
 ///////////////////////////////
 ast
-eval_ast (ast node, environment::const_ptr a_env); // fwd decl
+eval_ast (ast node, environment::ptr a_env); // fwd decl
 
 ///////////////////////////////
 ast
-eval_impl (ast root, environment::const_ptr a_env)
+EVAL (ast tree, environment::ptr a_env)
 {
-    if (root->type () != node_type_enum::LIST)
-        return { eval_ast (root, a_env) };
+    if (tree->type () != node_type_enum::LIST)
+        return { eval_ast (tree, a_env) };
 
-    auto root_list = root->as<ast_node_list> ();
+    auto root_list = tree->as<ast_node_list> ();
 
     if (root_list->size () == 0)
     {
-        return root;
+        return tree;
     }
 
-    ast new_node = eval_ast (root, a_env);
+    ast new_node = eval_ast (tree, a_env);
     auto new_node_list = new_node->as_or_throw<ast_node_list, mal_exception_eval_not_list> ();
 
     return apply (new_node_list);
@@ -89,7 +89,7 @@ eval_impl (ast root, environment::const_ptr a_env)
 
 ///////////////////////////////
 ast
-eval_ast (ast node, environment::const_ptr a_env)
+eval_ast (ast node, environment::ptr a_env)
 {
     switch (node->type ())
     {
@@ -103,20 +103,20 @@ eval_ast (ast node, environment::const_ptr a_env)
         {
             // as_or_throw ?
             auto&& node_list = node->as<ast_node_list> ();
-            return node_list->map ([&a_env] (ast_node::ptr v) { return eval_impl (v, a_env);});
+            return node_list->map ([&a_env] (ast_node::ptr v) { return EVAL (v, a_env);});
         }
     case node_type_enum::VECTOR:
         {
             // as_or_throw ?
             auto&& node_vector = node->as<ast_node_vector> ();
-            return node_vector->map ([&a_env] (ast_node::ptr v) { return eval_impl (v, a_env);});
+            return node_vector->map ([&a_env] (ast_node::ptr v) { return EVAL (v, a_env);});
         }
     case node_type_enum::HASHMAP:
         {
             // not as_or_throw - we know the type
             const auto& node_hashmap = node->as<ast_node_hashmap> ();
             auto retVal = mal::make_hashmap ();
-            node_hashmap->for_each ([&] (ast_node::ptr k, ast_node::ptr v) { retVal->insert (eval_impl (k, a_env), eval_impl (v, a_env)); });
+            node_hashmap->for_each ([&] (ast_node::ptr k, ast_node::ptr v) { retVal->insert (EVAL (k, a_env), EVAL (v, a_env)); });
             return static_cast<ast_node::ptr> (retVal);
         }
 
@@ -125,13 +125,6 @@ eval_ast (ast node, environment::const_ptr a_env)
     }
 
     return node;
-}
-
-///////////////////////////////
-ast
-EVAL (ast tree, environment::const_ptr a_env)
-{
-    return eval_impl (tree, a_env);
 }
 
 ///////////////////////////////
